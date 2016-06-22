@@ -18,10 +18,21 @@ static THD_FUNCTION(led_update, arg) {
     chRegSetThreadName("LED update");
 
     for(;;) {
-		ws2812b_set_all(0x0000FF);
-        chThdSleepMilliseconds(500);
-		ws2812b_set_all(0);
-        chThdSleepMilliseconds(500);
+    	ControllerFault fault = controller_get_fault();
+    	if (fault == NO_FAULT)
+    	{
+			ws2812b_set_all(0x0000FF);
+	        chThdSleepMilliseconds(500);
+			ws2812b_set_all(0);
+	        chThdSleepMilliseconds(500);
+    	}
+    	else
+    	{
+			ws2812b_set_all(0xFF0000);
+	        chThdSleepMilliseconds(250);
+			ws2812b_set_all(0);
+	        chThdSleepMilliseconds(250);
+    	}
     }
 }
 
@@ -29,6 +40,8 @@ static THD_FUNCTION(led_update, arg) {
 int main(void) {
 	halInit();
 	chSysInit();
+
+    chThdSleepMilliseconds(100);
 
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);

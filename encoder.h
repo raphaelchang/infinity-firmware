@@ -11,7 +11,7 @@ typedef enum
     AS5145B, // SSI, 12-bit angular, 12-bit incremental
     AS5x47P, // SPI, 14-bit angular, 12-bit incremental
     HALL,
-    NONE
+    SENSORLESS
 } EncoderType;
 
 void encoder_init(void);

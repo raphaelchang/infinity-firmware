@@ -20,9 +20,12 @@
         TIM1->CCR4 = TIM1->ARR - 2; \
         TIM1->CR1 &= ~TIM_CR1_UDIS;
 
-static ZSMMode zsm_mode = SINUSOIDAL;
-static ControllerState state = ZEROING;
-volatile uint16_t ADC_Value[3];
+#define CHECK_CURRENT(adc) (adc > 500 && adc < 4096 - 500)
+
+static volatile ZSMMode zsm_mode = SINUSOIDAL;
+static volatile ControllerState state = ZEROING;
+static volatile ControllerFault fault = NO_FAULT;
+static volatile uint16_t ADC_Value[3];
 
 CH_IRQ_HANDLER(ADC1_2_3_IRQHandler) {
     CH_IRQ_PROLOGUE();
@@ -201,6 +204,11 @@ void controller_init(void)
     TIM_CtrlPWMOutputs(TIM1, ENABLE);
 
     SET_DUTY(0, 0, 0);
+
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_WWDG, ENABLE);
+    WWDG_SetPrescaler(WWDG_Prescaler_1);
+    WWDG_SetWindowValue(255);
+    WWDG_Enable(100);
 }
 
 static int adc1;
@@ -212,15 +220,22 @@ static float angle = 0;
 /* Updates the controller state machine. Called as an interrupt handler on new ADC sample. */
 void controller_update(void)
 {
+    WWDG_SetCounter(100);
+    adc1 = ADC_GetInjectedConversionValue(ADC1, ADC_InjectedChannel_1);
+    adc2 = ADC_GetInjectedConversionValue(ADC2, ADC_InjectedChannel_1);
+    adc3 = ADC_GetInjectedConversionValue(ADC3, ADC_InjectedChannel_1);
+    if (fault == OVERCURRENT || !(CHECK_CURRENT(adc1) && CHECK_CURRENT(adc2) && CHECK_CURRENT(adc3)))
+    {
+        SET_DUTY(0, 0, 0);
+        fault = OVERCURRENT;
+        return;
+    }
     switch(state)
     {
         case STOPPED:
             break;
         case RUNNING:
             angle = encoder_get_angle();
-            adc1 = ADC_GetInjectedConversionValue(ADC1, ADC_InjectedChannel_1);
-            adc2 = ADC_GetInjectedConversionValue(ADC2, ADC_InjectedChannel_1);
-            adc3 = ADC_GetInjectedConversionValue(ADC3, ADC_InjectedChannel_1);
             // float a, b, c, alpha, beta;
             // transforms_inverse_park(0, 0.2, angle, &alpha, &beta);
             // transforms_inverse_clarke(alpha, beta, &a, &b, &c);
@@ -276,4 +291,9 @@ void controller_apply_zsm(float *a, float *b, float *c)
             zsm_top_clamp(a, b, c);
             break;
     }
+}
+
+ControllerFault controller_get_fault(void)
+{
+    return fault;
 }

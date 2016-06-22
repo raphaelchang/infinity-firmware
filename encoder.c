@@ -24,7 +24,7 @@ void encoder_init(void)
             break;
         case HALL:
             break;
-        case NONE:
+        case SENSORLESS:
             break;
         default:
             break;
@@ -48,7 +48,7 @@ float encoder_get_angle(void)
             break;
         case HALL:
             break;
-        case NONE:
+        case SENSORLESS:
             break;
         default:
             break;
