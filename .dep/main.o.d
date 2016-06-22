@@ -1,4 +1,4 @@
-build/obj/main.o: main.cpp ChibiOS_16.1.4/os/rt/include/ch.h \
+build/obj/main.o: main.c ChibiOS_16.1.4/os/rt/include/ch.h \
  ChibiOS_16.1.4/os/rt/ports/ARMCMx/compilers/GCC/chtypes.h \
  /opt/homebrew-cask/Caskroom/gcc-arm-embedded/5_2-2015q4,20151219/gcc-arm-none-eabi-5_2-2015q4/lib/gcc/arm-none-eabi/5.2.1/include/stddef.h \
  /opt/homebrew-cask/Caskroom/gcc-arm-embedded/5_2-2015q4,20151219/gcc-arm-none-eabi-5_2-2015q4/lib/gcc/arm-none-eabi/5.2.1/include/stdint.h \
@@ -57,20 +57,15 @@ build/obj/main.o: main.cpp ChibiOS_16.1.4/os/rt/include/ch.h \
  ChibiOS_16.1.4/os/hal/include/hal_queues.h \
  ChibiOS_16.1.4/os/hal/include/pal.h \
  ChibiOS_16.1.4/os/hal/ports/STM32/LLD/GPIOv2/pal_lld.h \
- ChibiOS_16.1.4/os/hal/include/adc.h \
- ChibiOS_16.1.4/os/hal/ports/STM32/LLD/ADCv2/adc_lld.h \
- ChibiOS_16.1.4/os/hal/include/can.h ChibiOS_16.1.4/os/hal/include/dac.h \
- ChibiOS_16.1.4/os/hal/include/ext.h \
+ ChibiOS_16.1.4/os/hal/include/adc.h ChibiOS_16.1.4/os/hal/include/can.h \
+ ChibiOS_16.1.4/os/hal/include/dac.h ChibiOS_16.1.4/os/hal/include/ext.h \
  ChibiOS_16.1.4/os/hal/ports/STM32/LLD/EXTIv1/ext_lld.h \
  ChibiOS_16.1.4/os/hal/ports/STM32/STM32F4xx/ext_lld_isr.h \
  ChibiOS_16.1.4/os/hal/include/gpt.h ChibiOS_16.1.4/os/hal/include/i2c.h \
  ChibiOS_16.1.4/os/hal/ports/STM32/LLD/I2Cv1/i2c_lld.h \
  ChibiOS_16.1.4/os/hal/include/i2s.h ChibiOS_16.1.4/os/hal/include/icu.h \
  ChibiOS_16.1.4/os/hal/include/mac.h ChibiOS_16.1.4/os/hal/include/mii.h \
- ChibiOS_16.1.4/os/hal/include/pwm.h \
- ChibiOS_16.1.4/os/hal/ports/STM32/LLD/TIMv1/pwm_lld.h \
- ChibiOS_16.1.4/os/hal/ports/STM32/LLD/TIMv1/stm32_tim.h \
- ChibiOS_16.1.4/os/hal/include/rtc.h \
+ ChibiOS_16.1.4/os/hal/include/pwm.h ChibiOS_16.1.4/os/hal/include/rtc.h \
  ChibiOS_16.1.4/os/hal/include/serial.h \
  ChibiOS_16.1.4/os/hal/include/sdc.h ChibiOS_16.1.4/os/hal/include/spi.h \
  ChibiOS_16.1.4/os/hal/ports/STM32/LLD/SPIv1/spi_lld.h \
@@ -80,6 +75,7 @@ build/obj/main.o: main.cpp ChibiOS_16.1.4/os/rt/include/ch.h \
  ChibiOS_16.1.4/os/hal/include/wdg.h ChibiOS_16.1.4/os/hal/include/st.h \
  ChibiOS_16.1.4/os/hal/ports/STM32/LLD/TIMv1/st_lld.h mcuconf.h \
  ChibiOS_16.1.4/os/hal/ports/STM32/STM32F4xx/stm32_registry.h \
+ ChibiOS_16.1.4/os/hal/ports/STM32/LLD/TIMv1/stm32_tim.h \
  ChibiOS_16.1.4/os/hal/include/mmc_spi.h \
  ChibiOS_16.1.4/os/hal/include/serial_usb.h \
  ChibiOS_16.1.4/os/hal/include/usb_cdc.h stm32f4xx_conf.h \
@@ -93,8 +89,9 @@ build/obj/main.o: main.cpp ChibiOS_16.1.4/os/rt/include/ch.h \
  ChibiOS_16.1.4/ext/stdperiph_stm32f4/inc/stm32f4xx_syscfg.h \
  ChibiOS_16.1.4/ext/stdperiph_stm32f4/inc/stm32f4xx_tim.h \
  ChibiOS_16.1.4/ext/stdperiph_stm32f4/inc/stm32f4xx_wwdg.h comm_usb.h \
- ws2812b.h ChibiOS_16.1.4/os/hal/lib/streams/chprintf.h \
+ ChibiOS_16.1.4/os/hal/lib/streams/chprintf.h \
  /opt/homebrew-cask/Caskroom/gcc-arm-embedded/5_2-2015q4,20151219/gcc-arm-none-eabi-5_2-2015q4/lib/gcc/arm-none-eabi/5.2.1/include/stdarg.h \
+ comm.h halconf.h ws2812b.h encoder.h controller.h \
  /opt/homebrew-cask/Caskroom/gcc-arm-embedded/5_2-2015q4,20151219/gcc-arm-none-eabi-5_2-2015q4/arm-none-eabi/include/stdio.h \
  /opt/homebrew-cask/Caskroom/gcc-arm-embedded/5_2-2015q4,20151219/gcc-arm-none-eabi-5_2-2015q4/arm-none-eabi/include/_ansi.h \
  /opt/homebrew-cask/Caskroom/gcc-arm-embedded/5_2-2015q4,20151219/gcc-arm-none-eabi-5_2-2015q4/arm-none-eabi/include/newlib.h \
@@ -248,8 +245,6 @@ ChibiOS_16.1.4/os/hal/ports/STM32/LLD/GPIOv2/pal_lld.h:
 
 ChibiOS_16.1.4/os/hal/include/adc.h:
 
-ChibiOS_16.1.4/os/hal/ports/STM32/LLD/ADCv2/adc_lld.h:
-
 ChibiOS_16.1.4/os/hal/include/can.h:
 
 ChibiOS_16.1.4/os/hal/include/dac.h:
@@ -275,10 +270,6 @@ ChibiOS_16.1.4/os/hal/include/mac.h:
 ChibiOS_16.1.4/os/hal/include/mii.h:
 
 ChibiOS_16.1.4/os/hal/include/pwm.h:
-
-ChibiOS_16.1.4/os/hal/ports/STM32/LLD/TIMv1/pwm_lld.h:
-
-ChibiOS_16.1.4/os/hal/ports/STM32/LLD/TIMv1/stm32_tim.h:
 
 ChibiOS_16.1.4/os/hal/include/rtc.h:
 
@@ -307,6 +298,8 @@ ChibiOS_16.1.4/os/hal/ports/STM32/LLD/TIMv1/st_lld.h:
 mcuconf.h:
 
 ChibiOS_16.1.4/os/hal/ports/STM32/STM32F4xx/stm32_registry.h:
+
+ChibiOS_16.1.4/os/hal/ports/STM32/LLD/TIMv1/stm32_tim.h:
 
 ChibiOS_16.1.4/os/hal/include/mmc_spi.h:
 
@@ -338,11 +331,19 @@ ChibiOS_16.1.4/ext/stdperiph_stm32f4/inc/stm32f4xx_wwdg.h:
 
 comm_usb.h:
 
-ws2812b.h:
-
 ChibiOS_16.1.4/os/hal/lib/streams/chprintf.h:
 
 /opt/homebrew-cask/Caskroom/gcc-arm-embedded/5_2-2015q4,20151219/gcc-arm-none-eabi-5_2-2015q4/lib/gcc/arm-none-eabi/5.2.1/include/stdarg.h:
+
+comm.h:
+
+halconf.h:
+
+ws2812b.h:
+
+encoder.h:
+
+controller.h:
 
 /opt/homebrew-cask/Caskroom/gcc-arm-embedded/5_2-2015q4,20151219/gcc-arm-none-eabi-5_2-2015q4/arm-none-eabi/include/stdio.h:
 

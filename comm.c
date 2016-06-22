@@ -31,6 +31,7 @@ static THD_FUNCTION(comm_update, arg) {
                 break;
             case CUSTOM:
                 break;
+        }
 
         // Forward commands to CAN and USB
         
@@ -56,5 +57,6 @@ void comm_init(void)
             break;
         case CUSTOM:
             break;
+    }
     chThdCreateStatic(comm_update_wa, sizeof(comm_update_wa), NORMALPRIO, comm_update, NULL);
 }

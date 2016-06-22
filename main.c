@@ -18,7 +18,10 @@ static THD_FUNCTION(led_update, arg) {
     chRegSetThreadName("LED update");
 
     for(;;) {
-        chThdSleepMilliseconds(10);
+		ws2812b_set_all(0x0000FF);
+        chThdSleepMilliseconds(500);
+		ws2812b_set_all(0);
+        chThdSleepMilliseconds(500);
     }
 }
 
@@ -30,22 +33,17 @@ int main(void) {
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
-	chThdSleepMilliseconds(1000);
 
-	comm_usb_serial_init();
 	comm_init();
 	ws2812b_init();
     encoder_init();
 	controller_init();
+	comm_usb_serial_init();
 
     chThdCreateStatic(led_update_wa, sizeof(led_update_wa), NORMALPRIO, led_update, NULL);
 	for(;;)
 	{
-		if (comm_usb_serial_is_active())
-		{
-			uint8_t test[20] = "Hello world";
-			chprintf((BaseSequentialStream *)&SDU1, "%s\n", test);
-		}
-		chThdSleepMilliseconds(1000);
+		controller_print_adc();
+		chThdSleepMilliseconds(100);
 	}
 }

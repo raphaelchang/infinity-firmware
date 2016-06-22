@@ -7,7 +7,7 @@
 #include "encoder.h"
 
 void as5x45_init(EncoderType type);
-double as5x45_get_angle(void);
+float as5x45_get_angle(void);
 uint16_t as5x45_get_raw_position(void);
 
 #endif

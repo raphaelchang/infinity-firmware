@@ -6,9 +6,9 @@
 
 # Compiler options here.
 ifeq ($(USE_OPT),)
-  USE_OPT = --specs=rdimon.specs -O2 -ggdb -fomit-frame-pointer -falign-functions=16
+  USE_OPT = -O2 -ggdb -fomit-frame-pointer -falign-functions=16
   USE_OPT += -DBOARD_OTG_NOVBUSSENS $(build_args)
-#  USE_OPT += -fsingle-precision-constant
+  USE_OPT += -fsingle-precision-constant -Wdouble-promotion
 endif
 
 # C specific options here (added to USE_OPT).
@@ -122,7 +122,8 @@ CSRC = $(STARTUPSRC) \
        $(CHIBIOS)/os/hal/lib/streams/chprintf.c \
        $(CHIBIOS)/os/various/syscalls.c \
        $(CHIBIOS)/os/various/shell.c \
-       main.c comm_usb.c ws2812b.c
+       main.c as5x45.c as5x47.c comm_can.c comm_i2c.c comm_uart.c comm_usb.c comm.c \
+       controller.c encoder.c transforms.c ws2812b.c zsm.c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
@@ -236,7 +237,7 @@ build/$(PROJECT).bin: build/$(PROJECT).elf
 
 # Program
 upload: build/$(PROJECT).bin
-	sudo dfu-util -a 0 -D build/$(PROJECT).bin -S STM32FxSTM32 -s 0x08000000
+	sudo dfu-util -a 0 -D build/$(PROJECT).bin -S 357E33683235 -s 0x08000000
 
 RULESPATH = $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC
 include $(RULESPATH)/rules.mk

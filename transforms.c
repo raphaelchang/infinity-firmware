@@ -1,32 +1,33 @@
 #include "transforms.h"
+#include <math.h>
 
-void transforms_park(int alpha, int beta, int theta, int *d, int *q)
+void transforms_park(float alpha, float beta, float theta, float *d, float *q)
 {
-    *d = (alpha * Util::Sin((theta + 90) % 360) + beta * Util::Sin(theta % 360)) / factor;
-    *q = (beta * Util::Sin((theta + 90) % 360) - alpha * Util::Sin(theta % 360)) / factor;
+    *d = alpha * (float)cos(fmod(theta, 360)) + beta * (float)sin(fmod(theta, 360));
+    *q = beta * (float)cos(fmod(theta, 360)) - alpha * (float)sin(fmod(theta, 360));
 }
 
-void transforms_inverse_park(int d, int q, int theta, int *alpha, int *beta)
+void transforms_inverse_park(float d, float q, float theta, float *alpha, float *beta)
 {
-    *alpha = (d * Util::Sin((theta + 90) % 360) - q * Util::Sin(theta % 360)) / factor;
-    *beta = (d * Util::Sin(theta % 360) + q * Util::Sin((theta + 90) % 360)) / factor;
+    *alpha = d * (float)cos(fmod(theta, 360)) - q * (float)sin(fmod(theta, 360));
+    *beta = d * (float)sin(fmod(theta, 360)) + q * (float)cos(fmod(theta, 360));
 }
 
-void transforms_clarke(int a, int b, int c, int *alpha, int *beta)
+void transforms_clarke(float a, float b, float c, float *alpha, float *beta)
 {
     *alpha = a;
-    *beta = (577 * a) / factor + (1154 * b) / factor;
+    *beta = (0.577 * a) + (1.154 * b);
 }
 
-void transforms_inverse_clarke(int alpha, int beta, int *a, int *b, int *c)
+void transforms_inverse_clarke(float alpha, float beta, float *a, float *b, float *c)
 {
     *a = alpha;
-    *b = -alpha / 2 + (866 * beta) / factor;
-    *c = -alpha / 2 - (866 * beta) / factor;
+    *b = -alpha / 2.0 + (0.866 * beta);
+    *c = -alpha / 2.0 - (0.866 * beta);
     // Multiply by 1/sqrt(3) because phase voltages have amplitude 1/sqrt(3) of bus voltage
-    *a = (577 * (*a)) / factor;
-    *b = (577 * (*b)) / factor;
-    *c = (577 * (*c)) / factor;
+    *a = (0.577 * (*a));
+    *b = (0.577 * (*b));
+    *c = (0.577 * (*c));
     //*a = (2 * alpha) / 3;
     //*b = -alpha / 3 + (577 * beta) / factor;
     //*c = -alpha / 3 - (577 * beta) / factor;

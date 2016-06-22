@@ -6,7 +6,8 @@
 #include "hal.h"
 
 void as5x47_init(void);
-double as5x47_get_angle(void);
+float as5x47_get_angle(void);
+void as5x47_update_raw_position(void);
 uint16_t as5x47_get_raw_position(void);
 
 #endif

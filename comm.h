@@ -5,7 +5,7 @@
 #include "ch.h"
 #include "hal.h"
 
-enum CommInterface
+typedef enum
 {
     CAN,
     I2C,
@@ -13,7 +13,7 @@ enum CommInterface
     PPM,
     NUNCHUK,
     CUSTOM
-};
+} CommInterface;
 
 void comm_init(void);
 

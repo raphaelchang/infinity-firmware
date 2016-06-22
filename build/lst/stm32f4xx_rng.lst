@@ -1,4 +1,4 @@
-ARM GAS  /var/folders/m4/4md61f0s1_g0rzfghffqnxvr0000gn/T//ccg2Dcoz.s 			page 1
+ARM GAS  /var/folders/m4/4md61f0s1_g0rzfghffqnxvr0000gn/T//ccqAqw5v.s 			page 1
 
 
    1              		.syntax unified
@@ -32,39 +32,39 @@ ARM GAS  /var/folders/m4/4md61f0s1_g0rzfghffqnxvr0000gn/T//ccg2Dcoz.s 			page 1
   29 0006 00000000 		.4byte	.Ldebug_abbrev0
   30 000a 04       		.byte	0x4
   31 000b 01       		.uleb128 0x1
-  32 000c 1A010000 		.4byte	.LASF12
+  32 000c 57000000 		.4byte	.LASF12
   33 0010 0C       		.byte	0xc
-  34 0011 57000000 		.4byte	.LASF13
-  35 0015 CA000000 		.4byte	.LASF14
+  34 0011 79010000 		.4byte	.LASF13
+  35 0015 EC010000 		.4byte	.LASF14
   36 0019 00000000 		.4byte	.Ldebug_line0
   37 001d 02       		.uleb128 0x2
   38 001e 01       		.byte	0x1
   39 001f 06       		.byte	0x6
-  40 0020 B4000000 		.4byte	.LASF0
+  40 0020 D6010000 		.4byte	.LASF0
   41 0024 02       		.uleb128 0x2
   42 0025 01       		.byte	0x1
   43 0026 08       		.byte	0x8
-  44 0027 90000000 		.4byte	.LASF1
+  44 0027 B2010000 		.4byte	.LASF1
   45 002b 02       		.uleb128 0x2
   46 002c 02       		.byte	0x2
   47 002d 05       		.byte	0x5
-  48 002e FF000000 		.4byte	.LASF2
+  48 002e 21020000 		.4byte	.LASF2
   49 0032 02       		.uleb128 0x2
   50 0033 02       		.byte	0x2
   51 0034 07       		.byte	0x7
   52 0035 0E000000 		.4byte	.LASF3
   53 0039 03       		.uleb128 0x3
-  54 003a C0000000 		.4byte	.LASF9
+  54 003a E2010000 		.4byte	.LASF9
   55 003e 01       		.byte	0x1
   56 003f 3F       		.byte	0x3f
   57 0040 44000000 		.4byte	0x44
-ARM GAS  /var/folders/m4/4md61f0s1_g0rzfghffqnxvr0000gn/T//ccg2Dcoz.s 			page 2
+ARM GAS  /var/folders/m4/4md61f0s1_g0rzfghffqnxvr0000gn/T//ccqAqw5v.s 			page 2
 
 
   58 0044 02       		.uleb128 0x2
   59 0045 04       		.byte	0x4
   60 0046 05       		.byte	0x5
-  61 0047 9E000000 		.4byte	.LASF4
+  61 0047 C0010000 		.4byte	.LASF4
   62 004b 02       		.uleb128 0x2
   63 004c 04       		.byte	0x4
   64 004d 07       		.byte	0x7
@@ -86,16 +86,16 @@ ARM GAS  /var/folders/m4/4md61f0s1_g0rzfghffqnxvr0000gn/T//ccg2Dcoz.s 			page 1
   80 0069 07       		.byte	0x7
   81 006a 21000000 		.4byte	.LASF8
   82 006e 03       		.uleb128 0x3
-  83 006f 09010000 		.4byte	.LASF10
+  83 006f 2B020000 		.4byte	.LASF10
   84 0073 02       		.byte	0x2
   85 0074 1F       		.byte	0x1f
   86 0075 39000000 		.4byte	0x39
   87 0079 02       		.uleb128 0x2
   88 007a 04       		.byte	0x4
   89 007b 07       		.byte	0x7
-  90 007c 11010000 		.4byte	.LASF11
+  90 007c 33020000 		.4byte	.LASF11
   91 0080 05       		.uleb128 0x5
-  92 0081 A7000000 		.4byte	.LASF15
+  92 0081 C9010000 		.4byte	.LASF15
   93 0085 03       		.byte	0x3
   94 0086 FA06     		.2byte	0x6fa
   95 0088 8C000000 		.4byte	0x8c
@@ -118,7 +118,7 @@ ARM GAS  /var/folders/m4/4md61f0s1_g0rzfghffqnxvr0000gn/T//ccg2Dcoz.s 			page 1
  112 000b 10       		.uleb128 0x10
  113 000c 17       		.uleb128 0x17
  114 000d 00       		.byte	0
-ARM GAS  /var/folders/m4/4md61f0s1_g0rzfghffqnxvr0000gn/T//ccg2Dcoz.s 			page 3
+ARM GAS  /var/folders/m4/4md61f0s1_g0rzfghffqnxvr0000gn/T//ccqAqw5v.s 			page 3
 
 
  115 000e 00       		.byte	0
@@ -178,7 +178,7 @@ ARM GAS  /var/folders/m4/4md61f0s1_g0rzfghffqnxvr0000gn/T//ccg2Dcoz.s 			page 1
  169 0044 35       		.uleb128 0x35
  170 0045 00       		.byte	0
  171 0046 49       		.uleb128 0x49
-ARM GAS  /var/folders/m4/4md61f0s1_g0rzfghffqnxvr0000gn/T//ccg2Dcoz.s 			page 4
+ARM GAS  /var/folders/m4/4md61f0s1_g0rzfghffqnxvr0000gn/T//ccqAqw5v.s 			page 4
 
 
  172 0047 13       		.uleb128 0x13
@@ -230,90 +230,93 @@ ARM GAS  /var/folders/m4/4md61f0s1_g0rzfghffqnxvr0000gn/T//ccg2Dcoz.s 			page 1
  198      6720756E 
  198      7369676E 
  198      65642069 
- 199              	.LASF13:
- 200 0057 43686962 		.ascii	"ChibiOS_16.1.4/ext/stdperiph_stm32f4/src/stm32f4xx_"
- 200      694F535F 
- 200      31362E31 
- 200      2E342F65 
- 200      78742F73 
- 201 008a 726E672E 		.ascii	"rng.c\000"
- 201      6300
-ARM GAS  /var/folders/m4/4md61f0s1_g0rzfghffqnxvr0000gn/T//ccg2Dcoz.s 			page 5
+ 199              	.LASF12:
+ 200 0057 474E5520 		.ascii	"GNU C99 5.2.1 20151202 (release) [ARM/embedded-5-br"
+ 200      43393920 
+ 200      352E322E 
+ 200      31203230 
+ 200      31353132 
+ 201 008a 616E6368 		.ascii	"anch revision 231848] -mcpu=cortex-m4 -mfloat-abi=h"
+ 201      20726576 
+ARM GAS  /var/folders/m4/4md61f0s1_g0rzfghffqnxvr0000gn/T//ccqAqw5v.s 			page 5
 
 
- 202              	.LASF1:
- 203 0090 756E7369 		.ascii	"unsigned char\000"
- 203      676E6564 
- 203      20636861 
- 203      7200
- 204              	.LASF4:
- 205 009e 6C6F6E67 		.ascii	"long int\000"
- 205      20696E74 
- 205      00
- 206              	.LASF15:
- 207 00a7 49544D5F 		.ascii	"ITM_RxBuffer\000"
- 207      52784275 
- 207      66666572 
- 207      00
- 208              	.LASF0:
- 209 00b4 7369676E 		.ascii	"signed char\000"
- 209      65642063 
- 209      68617200 
- 210              	.LASF9:
- 211 00c0 5F5F696E 		.ascii	"__int32_t\000"
- 211      7433325F 
- 211      7400
- 212              	.LASF14:
- 213 00ca 2F557365 		.ascii	"/Users/raphael/Documents/Projects/rESC/resc-firmwar"
- 213      72732F72 
- 213      61706861 
- 213      656C2F44 
- 213      6F63756D 
- 214 00fd 6500     		.ascii	"e\000"
- 215              	.LASF2:
- 216 00ff 73686F72 		.ascii	"short int\000"
- 216      7420696E 
- 216      7400
- 217              	.LASF10:
- 218 0109 696E7433 		.ascii	"int32_t\000"
- 218      325F7400 
- 219              	.LASF11:
- 220 0111 73697A65 		.ascii	"sizetype\000"
- 220      74797065 
- 220      00
- 221              	.LASF12:
- 222 011a 474E5520 		.ascii	"GNU C99 5.2.1 20151202 (release) [ARM/embedded-5-br"
- 222      43393920 
- 222      352E322E 
- 222      31203230 
- 222      31353132 
- 223 014d 616E6368 		.ascii	"anch revision 231848] -mcpu=cortex-m4 -mfloat-abi=h"
- 223      20726576 
- 223      6973696F 
- 223      6E203233 
- 223      31383438 
- 224 0180 61726420 		.ascii	"ard -mfpu=fpv4-sp-d16 -mno-thumb-interwork -mthumb "
- 224      2D6D6670 
- 224      753D6670 
- 224      76342D73 
- 224      702D6431 
- 225 01b3 2D676764 		.ascii	"-ggdb -O2 -std=c99 -fomit-frame-pointer -falign-fun"
-ARM GAS  /var/folders/m4/4md61f0s1_g0rzfghffqnxvr0000gn/T//ccg2Dcoz.s 			page 6
+ 201      6973696F 
+ 201      6E203233 
+ 201      31383438 
+ 202 00bd 61726420 		.ascii	"ard -mfpu=fpv4-sp-d16 -mno-thumb-interwork -mthumb "
+ 202      2D6D6670 
+ 202      753D6670 
+ 202      76342D73 
+ 202      702D6431 
+ 203 00f0 2D676764 		.ascii	"-ggdb -O2 -std=c99 -fomit-frame-pointer -falign-fun"
+ 203      62202D4F 
+ 203      32202D73 
+ 203      74643D63 
+ 203      3939202D 
+ 204 0123 6374696F 		.ascii	"ctions=16 -fsingle-precision-constant -ffunction-se"
+ 204      6E733D31 
+ 204      36202D66 
+ 204      73696E67 
+ 204      6C652D70 
+ 205 0156 6374696F 		.ascii	"ctions -fdata-sections -fno-common\000"
+ 205      6E73202D 
+ 205      66646174 
+ 205      612D7365 
+ 205      6374696F 
+ 206              	.LASF13:
+ 207 0179 43686962 		.ascii	"ChibiOS_16.1.4/ext/stdperiph_stm32f4/src/stm32f4xx_"
+ 207      694F535F 
+ 207      31362E31 
+ 207      2E342F65 
+ 207      78742F73 
+ 208 01ac 726E672E 		.ascii	"rng.c\000"
+ 208      6300
+ 209              	.LASF1:
+ 210 01b2 756E7369 		.ascii	"unsigned char\000"
+ 210      676E6564 
+ 210      20636861 
+ 210      7200
+ 211              	.LASF4:
+ 212 01c0 6C6F6E67 		.ascii	"long int\000"
+ 212      20696E74 
+ 212      00
+ 213              	.LASF15:
+ 214 01c9 49544D5F 		.ascii	"ITM_RxBuffer\000"
+ 214      52784275 
+ 214      66666572 
+ 214      00
+ 215              	.LASF0:
+ 216 01d6 7369676E 		.ascii	"signed char\000"
+ 216      65642063 
+ 216      68617200 
+ 217              	.LASF9:
+ 218 01e2 5F5F696E 		.ascii	"__int32_t\000"
+ 218      7433325F 
+ 218      7400
+ 219              	.LASF14:
+ 220 01ec 2F557365 		.ascii	"/Users/raphael/Documents/Projects/rESC/resc-firmwar"
+ 220      72732F72 
+ 220      61706861 
+ARM GAS  /var/folders/m4/4md61f0s1_g0rzfghffqnxvr0000gn/T//ccqAqw5v.s 			page 6
 
 
- 225      62202D4F 
- 225      32202D73 
- 225      74643D63 
- 225      3939202D 
- 226 01e6 6374696F 		.ascii	"ctions=16 -ffunction-sections -fdata-sections -fno-"
- 226      6E733D31 
- 226      36202D66 
- 226      66756E63 
- 226      74696F6E 
- 227 0219 636F6D6D 		.ascii	"common\000"
- 227      6F6E00
+ 220      656C2F44 
+ 220      6F63756D 
+ 221 021f 6500     		.ascii	"e\000"
+ 222              	.LASF2:
+ 223 0221 73686F72 		.ascii	"short int\000"
+ 223      7420696E 
+ 223      7400
+ 224              	.LASF10:
+ 225 022b 696E7433 		.ascii	"int32_t\000"
+ 225      325F7400 
+ 226              	.LASF11:
+ 227 0233 73697A65 		.ascii	"sizetype\000"
+ 227      74797065 
+ 227      00
  228              		.ident	"GCC: (GNU Tools for ARM Embedded Processors) 5.2.1 20151202 (release) [ARM/embedded-5-bran
-ARM GAS  /var/folders/m4/4md61f0s1_g0rzfghffqnxvr0000gn/T//ccg2Dcoz.s 			page 7
+ARM GAS  /var/folders/m4/4md61f0s1_g0rzfghffqnxvr0000gn/T//ccqAqw5v.s 			page 7
 
 
 DEFINED SYMBOLS

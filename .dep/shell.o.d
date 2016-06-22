@@ -70,20 +70,15 @@ build/obj/shell.o: ChibiOS_16.1.4/os/various/shell.c \
  ChibiOS_16.1.4/os/hal/include/hal_queues.h \
  ChibiOS_16.1.4/os/hal/include/pal.h \
  ChibiOS_16.1.4/os/hal/ports/STM32/LLD/GPIOv2/pal_lld.h \
- ChibiOS_16.1.4/os/hal/include/adc.h \
- ChibiOS_16.1.4/os/hal/ports/STM32/LLD/ADCv2/adc_lld.h \
- ChibiOS_16.1.4/os/hal/include/can.h ChibiOS_16.1.4/os/hal/include/dac.h \
- ChibiOS_16.1.4/os/hal/include/ext.h \
+ ChibiOS_16.1.4/os/hal/include/adc.h ChibiOS_16.1.4/os/hal/include/can.h \
+ ChibiOS_16.1.4/os/hal/include/dac.h ChibiOS_16.1.4/os/hal/include/ext.h \
  ChibiOS_16.1.4/os/hal/ports/STM32/LLD/EXTIv1/ext_lld.h \
  ChibiOS_16.1.4/os/hal/ports/STM32/STM32F4xx/ext_lld_isr.h \
  ChibiOS_16.1.4/os/hal/include/gpt.h ChibiOS_16.1.4/os/hal/include/i2c.h \
  ChibiOS_16.1.4/os/hal/ports/STM32/LLD/I2Cv1/i2c_lld.h \
  ChibiOS_16.1.4/os/hal/include/i2s.h ChibiOS_16.1.4/os/hal/include/icu.h \
  ChibiOS_16.1.4/os/hal/include/mac.h ChibiOS_16.1.4/os/hal/include/mii.h \
- ChibiOS_16.1.4/os/hal/include/pwm.h \
- ChibiOS_16.1.4/os/hal/ports/STM32/LLD/TIMv1/pwm_lld.h \
- ChibiOS_16.1.4/os/hal/ports/STM32/LLD/TIMv1/stm32_tim.h \
- ChibiOS_16.1.4/os/hal/include/rtc.h \
+ ChibiOS_16.1.4/os/hal/include/pwm.h ChibiOS_16.1.4/os/hal/include/rtc.h \
  ChibiOS_16.1.4/os/hal/include/serial.h \
  ChibiOS_16.1.4/os/hal/include/sdc.h ChibiOS_16.1.4/os/hal/include/spi.h \
  ChibiOS_16.1.4/os/hal/ports/STM32/LLD/SPIv1/spi_lld.h \
@@ -93,6 +88,7 @@ build/obj/shell.o: ChibiOS_16.1.4/os/various/shell.c \
  ChibiOS_16.1.4/os/hal/include/wdg.h ChibiOS_16.1.4/os/hal/include/st.h \
  ChibiOS_16.1.4/os/hal/ports/STM32/LLD/TIMv1/st_lld.h mcuconf.h \
  ChibiOS_16.1.4/os/hal/ports/STM32/STM32F4xx/stm32_registry.h \
+ ChibiOS_16.1.4/os/hal/ports/STM32/LLD/TIMv1/stm32_tim.h \
  ChibiOS_16.1.4/os/hal/include/mmc_spi.h \
  ChibiOS_16.1.4/os/hal/include/serial_usb.h \
  ChibiOS_16.1.4/os/hal/include/usb_cdc.h \
@@ -254,8 +250,6 @@ ChibiOS_16.1.4/os/hal/ports/STM32/LLD/GPIOv2/pal_lld.h:
 
 ChibiOS_16.1.4/os/hal/include/adc.h:
 
-ChibiOS_16.1.4/os/hal/ports/STM32/LLD/ADCv2/adc_lld.h:
-
 ChibiOS_16.1.4/os/hal/include/can.h:
 
 ChibiOS_16.1.4/os/hal/include/dac.h:
@@ -281,10 +275,6 @@ ChibiOS_16.1.4/os/hal/include/mac.h:
 ChibiOS_16.1.4/os/hal/include/mii.h:
 
 ChibiOS_16.1.4/os/hal/include/pwm.h:
-
-ChibiOS_16.1.4/os/hal/ports/STM32/LLD/TIMv1/pwm_lld.h:
-
-ChibiOS_16.1.4/os/hal/ports/STM32/LLD/TIMv1/stm32_tim.h:
 
 ChibiOS_16.1.4/os/hal/include/rtc.h:
 
@@ -313,6 +303,8 @@ ChibiOS_16.1.4/os/hal/ports/STM32/LLD/TIMv1/st_lld.h:
 mcuconf.h:
 
 ChibiOS_16.1.4/os/hal/ports/STM32/STM32F4xx/stm32_registry.h:
+
+ChibiOS_16.1.4/os/hal/ports/STM32/LLD/TIMv1/stm32_tim.h:
 
 ChibiOS_16.1.4/os/hal/include/mmc_spi.h:
 

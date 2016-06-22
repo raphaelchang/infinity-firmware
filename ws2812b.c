@@ -58,8 +58,8 @@ void ws2812b_init(void) {
 		gamma_table[i] = (int)roundf(powf((float)i / 255.0, 1.0 / 0.45) * 255.0);
 	}
 
-	palSetPadMode(GPIOB, 8,
-			PAL_MODE_ALTERNATE(GPIO_AF_TIM4) |
+	palSetPadMode(GPIOB, 0,
+			PAL_MODE_ALTERNATE(GPIO_AF_TIM3) |
 			PAL_STM32_OTYPE_PUSHPULL |
 			PAL_STM32_OSPEED_MID1);
 
@@ -67,9 +67,9 @@ void ws2812b_init(void) {
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
 
 	DMA_DeInit(DMA1_Stream7);
-	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&TIM4->CCR3;
+	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&TIM3->CCR3;
 
-	DMA_InitStructure.DMA_Channel = DMA_Channel_2;
+	DMA_InitStructure.DMA_Channel = DMA_Channel_5;
 	DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)bitbuffer;
 	DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
 	DMA_InitStructure.DMA_BufferSize = BITBUFFER_LEN;
@@ -86,7 +86,7 @@ void ws2812b_init(void) {
 
 	DMA_Init(DMA1_Stream7, &DMA_InitStructure);
 
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
 
 	// Time Base configuration
 	TIM_TimeBaseStructure.TIM_Prescaler = 0;
@@ -95,7 +95,7 @@ void ws2812b_init(void) {
 	TIM_TimeBaseStructure.TIM_ClockDivision = 0;
 	TIM_TimeBaseStructure.TIM_RepetitionCounter = 0;
 
-	TIM_TimeBaseInit(TIM4, &TIM_TimeBaseStructure);
+	TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
 
 	// Channel 3 Configuration in PWM mode
 	TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
@@ -103,19 +103,19 @@ void ws2812b_init(void) {
 	TIM_OCInitStructure.TIM_Pulse = bitbuffer[0];
 	TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
 
-	TIM_OC3Init(TIM4, &TIM_OCInitStructure);
-	TIM_OC3PreloadConfig(TIM4, TIM_OCPreload_Enable);
+	TIM_OC3Init(TIM3, &TIM_OCInitStructure);
+	TIM_OC3PreloadConfig(TIM3, TIM_OCPreload_Enable);
 
 	// TIM4 counter enable
-	TIM_Cmd(TIM4, ENABLE);
+	TIM_Cmd(TIM3, ENABLE);
 
 	DMA_Cmd(DMA1_Stream7, ENABLE);
 
 	// TIM4 Update DMA Request enable
-	TIM_DMACmd(TIM4, TIM_DMA_CC3, ENABLE);
+	TIM_DMACmd(TIM3, TIM_DMA_CC3, ENABLE);
 
 	// Main Output Enable
-	TIM_CtrlPWMOutputs(TIM4, ENABLE);
+	TIM_CtrlPWMOutputs(TIM3, ENABLE);
 }
 
 void ws2812b_set_led_color(int led, uint32_t color) {

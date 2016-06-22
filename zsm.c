@@ -1,37 +1,40 @@
 #include "zsm.h"
 
-void zsm_sinusoidal(int *a, int *b, int *c)
+#define min(x, y) (x < y ? x : y)
+#define max(x, y) (x > y ? x : y)
+
+void zsm_sinusoidal(float *a, float *b, float *c)
 {
-    *a = (866 * (*a)) / factor + factor / 2;
-    *b = (866 * (*b)) / factor + factor / 2;
-    *c = (866 * (*c)) / factor + factor / 2;
+    *a = (0.866f * (*a)) + 1.0f / 2;
+    *b = (0.866f * (*b)) + 1.0f / 2;
+    *c = (0.866f * (*c)) + 1.0f / 2;
 }
 
-void zsm_midpoint_clamp(int *a, int *b, int *c)
+void zsm_midpoint_clamp(float *a, float *b, float *c)
 {
-    int shift = (factor - (min(min(*a, *b), *c) + max(max(*a, *b), *c))) / 2;
+    float shift = (1 - (min(min(*a, *b), *c) + max(max(*a, *b), *c))) / 2.0;
     *a += shift;
     *b += shift;
     *c += shift;
 }
 
-void zsm_top_clamp(int *a, int *b, int *c)
+void zsm_top_clamp(float *a, float *b, float *c)
 {
-    int shift = factor - max(max(*a, *b), *c);
+    float shift = 1 - max(max(*a, *b), *c);
     *a += shift;
     *b += shift;
     *c += shift;
 }
 
-void zsm_bottom_clamp(int *a, int *b, int *c)
+void zsm_bottom_clamp(float *a, float *b, float *c)
 {
-    int shift = min(min(*a, *b), *c);
+    float shift = min(min(*a, *b), *c);
     *a -= shift;
     *b -= shift;
     *c -= shift;
 }
 
-void zsm_top_bottom_clamp(int *a, int *b, int *c)
+void zsm_top_bottom_clamp(float *a, float *b, float *c)
 {
     if ((*a) * (*b) * (*c) > 0) // Two negatives, largest amplitude positive
     {
