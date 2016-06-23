@@ -1,16 +1,21 @@
 #include "transforms.h"
 #include <math.h>
+#include "utils.h"
 
 void transforms_park(float alpha, float beta, float theta, float *d, float *q)
 {
-    *d = alpha * (float)cos(fmod(theta, 360)) + beta * (float)sin(fmod(theta, 360));
-    *q = beta * (float)cos(fmod(theta, 360)) - alpha * (float)sin(fmod(theta, 360));
+    float sin, cos;
+    utils_sincos(fmod(theta, 360), &sin, &cos);
+    *d = alpha * cos + beta * sin;
+    *q = beta * cos - alpha * sin;
 }
 
 void transforms_inverse_park(float d, float q, float theta, float *alpha, float *beta)
 {
-    *alpha = d * (float)cos(fmod(theta, 360)) - q * (float)sin(fmod(theta, 360));
-    *beta = d * (float)sin(fmod(theta, 360)) + q * (float)cos(fmod(theta, 360));
+    float sin, cos;
+    utils_sincos(fmod(theta, 360), &sin, &cos);
+    *alpha = d * cos - q * sin;
+    *beta = d * sin + q * cos;
 }
 
 void transforms_clarke(float a, float b, float c, float *alpha, float *beta)

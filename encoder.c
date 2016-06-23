@@ -40,10 +40,18 @@ float encoder_get_angle(void)
         case AS5045B:
         case AS5145B:
             deg = as5x45_get_angle() - encoderZero;
+            if (deg < 0)
+            {
+                deg += 360.0;
+            }
             edeg = fmod(deg, 360.0f / polePairs) * polePairs;
             break;
         case AS5x47P:
             deg = as5x47_get_angle() - encoderZero;
+            if (deg < 0)
+            {
+                deg += 360.0;
+            }
             edeg = fmod(deg, 360.0f / polePairs) * polePairs;
             break;
         case HALL:

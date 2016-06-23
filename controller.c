@@ -22,7 +22,7 @@
 
 #define CHECK_CURRENT(adc) (adc > 500 && adc < 4096 - 500)
 
-static volatile ZSMMode zsm_mode = SINUSOIDAL;
+static volatile ZSMMode zsm_mode = MIDPOINT_CLAMP;
 static volatile ControllerState state = ZEROING;
 static volatile ControllerFault fault = NO_FAULT;
 static volatile uint16_t ADC_Value[3];
@@ -216,6 +216,7 @@ static int adc2;
 static int adc3;
 static int e = 0;
 static float angle = 0;
+static float a, b, c;
 
 /* Updates the controller state machine. Called as an interrupt handler on new ADC sample. */
 void controller_update(void)
@@ -236,16 +237,16 @@ void controller_update(void)
             break;
         case RUNNING:
             angle = encoder_get_angle();
-            // float a, b, c, alpha, beta;
-            // transforms_inverse_park(0, 0.2, angle, &alpha, &beta);
-            // transforms_inverse_clarke(alpha, beta, &a, &b, &c);
-            // controller_apply_zsm(&a, &b, &c);
-            // SET_DUTY(a, b, c);
+            float alpha, beta;
+            transforms_inverse_park(0, 1.0, angle, &alpha, &beta);
+            transforms_inverse_clarke(alpha, beta, &a, &b, &c);
+            controller_apply_zsm(&a, &b, &c);
+            SET_DUTY(a, b, c);
             break;
         case ZEROING:
             if (e++ < 4000)
             {
-                float a, b, c, alpha, beta;
+                float alpha, beta;
                 transforms_inverse_park(0.25, 0, 0, &alpha, &beta);
                 transforms_inverse_clarke(alpha, beta, &a, &b, &c);
                 controller_apply_zsm(&a, &b, &c);
@@ -268,7 +269,8 @@ void controller_print_adc(void)
     {
         USB_PRINT("%f\n", angle);
     }
-    // USB_PRINT("%d %d %d\n", adc1, adc2, adc3);
+    USB_PRINT("%d %d %d\n", adc1, adc2, adc3);
+    USB_PRINT("%d %d %d\n", (int)(a * TIM1->ARR), (int)(b * TIM1->ARR), (int)(c * TIM1->ARR));
 }
 
 void controller_apply_zsm(float *a, float *b, float *c)
