@@ -311,3 +311,8 @@ ControllerFault controller_get_fault(void)
 {
     return fault;
 }
+
+ControllerState controller_get_state(void)
+{
+    return state;
+}

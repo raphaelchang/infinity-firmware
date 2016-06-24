@@ -5,6 +5,13 @@
 
 typedef enum
 {
+	STOPPED,
+	RUNNING,
+	ZEROING
+} ControllerState;
+
+typedef enum
+{
 	NO_FAULT,
 	UNDERVOLTAGE,
 	OVERVOLTAGE,

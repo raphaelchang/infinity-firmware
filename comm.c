@@ -30,6 +30,8 @@ static THD_FUNCTION(comm_update, arg) {
                 break;
             case NUNCHUK:
                 break;
+            case NRF:
+                break;
             case CUSTOM:
                 break;
         }
@@ -56,6 +58,8 @@ void comm_init(void)
         case PPM:
             break;
         case NUNCHUK:
+            break;
+        case NRF:
             break;
         case CUSTOM:
             break;
