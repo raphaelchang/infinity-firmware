@@ -12,7 +12,7 @@
 #include "config.h"
 
 #define SYSTEM_CORE_CLOCK       168000000
-#define DEAD_TIME_CYCLES          1000
+#define DEAD_TIME_CYCLES          60
 
 #define SET_DUTY(duty1, duty2, duty3) \
         TIM1->CR1 |= TIM_CR1_UDIS; \
