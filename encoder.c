@@ -7,17 +7,17 @@
 #include "as5x45.h"
 #include "as5x47.h"
 #include <math.h>
+#include "config.h"
 
-static EncoderType encoderType = AS5x47P;
-static uint8_t polePairs = 7;
-static float encoderZero = 26.0f;
+static volatile Config *config;
 
 void encoder_init(void)
 {
-    switch(encoderType) {
+    config = config_get_configuration();
+    switch(config->encoderType) {
         case AS5045B:
         case AS5145B:
-            as5x45_init(encoderType);
+            as5x45_init(config->encoderType);
             break;
         case AS5x47P:
             as5x47_init();
@@ -36,23 +36,23 @@ float encoder_get_angle(void)
 {
     float edeg = 0;
     float deg = 0;
-    switch(encoderType) {
+    switch(config->encoderType) {
         case AS5045B:
         case AS5145B:
-            deg = as5x45_get_angle() - encoderZero;
+            deg = as5x45_get_angle() - config->encoderZero;
             if (deg < 0)
             {
                 deg += 360.0;
             }
-            edeg = fmod(deg, 360.0f / polePairs) * polePairs;
+            edeg = fmod(deg, 360.0f / config->polePairs) * config->polePairs;
             break;
         case AS5x47P:
-            deg = as5x47_get_angle() - encoderZero;
+            deg = as5x47_get_angle() - config->encoderZero;
             if (deg < 0)
             {
                 deg += 360.0;
             }
-            edeg = fmod(deg, 360.0f / polePairs) * polePairs;
+            edeg = fmod(deg, 360.0f / config->polePairs) * config->polePairs;
             break;
         case HALL:
             break;

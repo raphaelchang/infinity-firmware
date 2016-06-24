@@ -4,16 +4,7 @@
 #include "halconf.h"
 #include "ch.h"
 #include "hal.h"
-
-typedef enum
-{
-    CAN,
-    I2C,
-    UART,
-    PPM,
-    NUNCHUK,
-    CUSTOM
-} CommInterface;
+#include "datatypes.h"
 
 void comm_init(void);
 

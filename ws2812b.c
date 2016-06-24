@@ -58,11 +58,6 @@ void ws2812b_init(void) {
 		gamma_table[i] = (int)roundf(powf((float)i / 255.0, 1.0 / 0.45) * 255.0);
 	}
 
-	palSetPadMode(GPIOB, 0,
-			PAL_MODE_ALTERNATE(GPIO_AF_TIM3) |
-			PAL_STM32_OTYPE_PUSHPULL |
-			PAL_STM32_OSPEED_MID1);
-
 	// DMA clock enable
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
 

@@ -1,16 +1,18 @@
 #include "controller.h"
 #include "ch.h"
 #include "hal.h"
+#include "hw_conf.h"
 #include "stm32f4xx_conf.h"
 #include "isr_vector_table.h"
 #include "comm_usb.h"
 #include "encoder.h"
 #include "transforms.h"
 #include "zsm.h"
+#include "datatypes.h"
+#include "config.h"
 
 #define SYSTEM_CORE_CLOCK       168000000
 #define DEAD_TIME_CYCLES          1000
-#define PWM_FREQ                    20000.0
 
 #define SET_DUTY(duty1, duty2, duty3) \
         TIM1->CR1 |= TIM_CR1_UDIS; \
@@ -22,10 +24,18 @@
 
 #define CHECK_CURRENT(adc) (adc > 500 && adc < 4096 - 500)
 
-static volatile ZSMMode zsm_mode = MIDPOINT_CLAMP;
+static volatile Config *config;
 static volatile ControllerState state = ZEROING;
 static volatile ControllerFault fault = NO_FAULT;
 static volatile uint16_t ADC_Value[3];
+
+static volatile int adc1;
+static volatile int adc2;
+static volatile int adc3;
+static volatile int e = 0;
+static volatile float angle = 0;
+static volatile float a, b, c;
+static volatile float lastDutyCycle[3];
 
 CH_IRQ_HANDLER(ADC1_2_3_IRQHandler) {
     CH_IRQ_PROLOGUE();
@@ -37,28 +47,8 @@ CH_IRQ_HANDLER(ADC1_2_3_IRQHandler) {
 }
 
 void controller_init(void)
-{   
-    palSetPadMode(GPIOA, 0, PAL_MODE_INPUT_ANALOG);
-    palSetPadMode(GPIOA, 1, PAL_MODE_INPUT_ANALOG);
-    palSetPadMode(GPIOA, 2, PAL_MODE_INPUT_ANALOG);
-    palSetPadMode(GPIOA, 8, PAL_MODE_ALTERNATE(GPIO_AF_TIM1) |
-            PAL_STM32_OSPEED_HIGHEST |
-            PAL_STM32_PUPDR_FLOATING);
-    palSetPadMode(GPIOA, 9, PAL_MODE_ALTERNATE(GPIO_AF_TIM1) |
-            PAL_STM32_OSPEED_HIGHEST |
-            PAL_STM32_PUPDR_FLOATING);
-    palSetPadMode(GPIOA, 10, PAL_MODE_ALTERNATE(GPIO_AF_TIM1) |
-            PAL_STM32_OSPEED_HIGHEST |
-            PAL_STM32_PUPDR_FLOATING);
-    palSetPadMode(GPIOB, 13, PAL_MODE_ALTERNATE(GPIO_AF_TIM1) |
-            PAL_STM32_OSPEED_HIGHEST |
-            PAL_STM32_PUPDR_FLOATING);
-    palSetPadMode(GPIOB, 14, PAL_MODE_ALTERNATE(GPIO_AF_TIM1) |
-            PAL_STM32_OSPEED_HIGHEST |
-            PAL_STM32_PUPDR_FLOATING);
-    palSetPadMode(GPIOB, 15, PAL_MODE_ALTERNATE(GPIO_AF_TIM1) |
-            PAL_STM32_OSPEED_HIGHEST |
-            PAL_STM32_PUPDR_FLOATING);
+{
+    config = config_get_configuration();
     TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
     TIM_OCInitTypeDef  TIM_OCInitStructure;
     TIM_BDTRInitTypeDef TIM_BDTRInitStructure;
@@ -69,7 +59,7 @@ void controller_init(void)
     // Time Base configuration
     TIM_TimeBaseStructure.TIM_Prescaler = 0;
     TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_CenterAligned2; // compare flag when upcounting
-    TIM_TimeBaseStructure.TIM_Period = SYSTEM_CORE_CLOCK / 2 / PWM_FREQ;
+    TIM_TimeBaseStructure.TIM_Period = SYSTEM_CORE_CLOCK / 2 / config->pwmFrequency;
     TIM_TimeBaseStructure.TIM_ClockDivision = 0;
     TIM_TimeBaseStructure.TIM_RepetitionCounter = 1; // Only generate update event on underflow
 
@@ -178,14 +168,14 @@ void controller_init(void)
     // ADC_InjectedSequencerLengthConfig(ADC2, 2);
 
     // ADC1 regular channels
-    ADC_InjectedChannelConfig(ADC1, ADC_Channel_0, 1, ADC_SampleTime_15Cycles);
+    ADC_InjectedChannelConfig(ADC1, CURR_A_CHANNEL, 1, ADC_SampleTime_15Cycles);
     // ADC_RegularChannelConfig(ADC1, ADC_Channel_Vrefint, 3, ADC_SampleTime_15Cycles);
 
     // ADC2 regular channels
-    ADC_InjectedChannelConfig(ADC2, ADC_Channel_1, 1, ADC_SampleTime_15Cycles);
+    ADC_InjectedChannelConfig(ADC2, CURR_B_CHANNEL, 1, ADC_SampleTime_15Cycles);
 
     // ADC3 regular channels
-    ADC_InjectedChannelConfig(ADC3, ADC_Channel_2, 1, ADC_SampleTime_15Cycles);
+    ADC_InjectedChannelConfig(ADC3, CURR_C_CHANNEL, 1, ADC_SampleTime_15Cycles);
 
     // Interrupt
     ADC_ITConfig(ADC1, ADC_IT_JEOC, ENABLE);
@@ -211,13 +201,6 @@ void controller_init(void)
     WWDG_Enable(100);
 }
 
-static int adc1;
-static int adc2;
-static int adc3;
-static int e = 0;
-static float angle = 0;
-static float a, b, c;
-
 /* Updates the controller state machine. Called as an interrupt handler on new ADC sample. */
 void controller_update(void)
 {
@@ -231,6 +214,29 @@ void controller_update(void)
         fault = OVERCURRENT;
         return;
     }
+    float currA = ((int16_t)adc1 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
+    float currB = ((int16_t)adc2 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
+    float currC = ((int16_t)adc3 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
+    // Check for ADC measurements that happened when the low side PWM was too short
+    if (lastDutyCycle[0] > 0.9)
+    {
+        currA = -(currB + currC);
+    }
+    else if (lastDutyCycle[1] > 0.9)
+    {
+        currB = -(currA + currC);
+    }
+    else if (lastDutyCycle[2] > 0.9)
+    {
+        currC = -(currA + currB);
+    }
+    // If all are good, use all the balanced current assumption to use all three channels to improve each channel's measurement
+    else if (lastDutyCycle[0] <= 0.95 && lastDutyCycle[1] <= 0.95 && lastDutyCycle[2] <= 0.95)
+    {
+        currA = currA / 2.0 - (currB + currC) / 2.0;
+        currB = currB / 2.0 - (currA + currC) / 2.0;
+        currC = currC / 2.0 - (currA + currB) / 2.0;
+    }
     switch(state)
     {
         case STOPPED:
@@ -242,6 +248,9 @@ void controller_update(void)
             transforms_inverse_clarke(alpha, beta, &a, &b, &c);
             controller_apply_zsm(&a, &b, &c);
             SET_DUTY(a, b, c);
+            lastDutyCycle[0] = a;
+            lastDutyCycle[1] = b;
+            lastDutyCycle[2] = c;
             break;
         case ZEROING:
             if (e++ < 4000)
@@ -252,6 +261,9 @@ void controller_update(void)
                 controller_apply_zsm(&a, &b, &c);
                 SET_DUTY(a, b, c);
                 angle = encoder_get_angle();
+                lastDutyCycle[0] = a;
+                lastDutyCycle[1] = b;
+                lastDutyCycle[2] = c;
             }
             else
             {
@@ -273,9 +285,9 @@ void controller_print_adc(void)
     USB_PRINT("%d %d %d\n", (int)(a * TIM1->ARR), (int)(b * TIM1->ARR), (int)(c * TIM1->ARR));
 }
 
-void controller_apply_zsm(float *a, float *b, float *c)
+void controller_apply_zsm(volatile float *a, volatile float *b, volatile float *c)
 {
-    switch(zsm_mode)
+    switch(config->zsmMode)
     {
         case SINUSOIDAL:
             zsm_sinusoidal(a, b, c);

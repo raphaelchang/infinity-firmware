@@ -4,6 +4,7 @@
 #include "hal.h"
 #include "stm32f4xx_conf.h"
 #include "comm_usb.h"
+#include "hw_conf.h"
 
 static void spicb(SPIDriver *spip);
 static bool inTransaction = false;
@@ -33,15 +34,15 @@ CH_IRQ_HANDLER(TIM4_IRQHandler) {
 
 void as5x47_init(void)
 {
-	palSetPadMode(GPIOA, 5, PAL_MODE_ALTERNATE(5) |
+	palSetPadMode(ENCODER_SCK_GPIO, ENCODER_SCK_PIN, PAL_MODE_ALTERNATE(5) |
                            PAL_STM32_OSPEED_HIGHEST);     /* SCK. */
-	palSetPadMode(GPIOA, 6, PAL_MODE_ALTERNATE(5) |
+	palSetPadMode(ENCODER_MISO_GPIO, ENCODER_MISO_PIN, PAL_MODE_ALTERNATE(5) |
                            PAL_STM32_OSPEED_HIGHEST);     /* MISO.*/
-	palSetPadMode(GPIOA, 7, PAL_MODE_ALTERNATE(5) |
+	palSetPadMode(ENCODER_MOSI_GPIO, ENCODER_MOSI_PIN, PAL_MODE_ALTERNATE(5) |
                            PAL_STM32_OSPEED_HIGHEST);     /* MOSI.*/
-	palSetPadMode(GPIOA, GPIOA_LRCK, PAL_MODE_OUTPUT_PUSHPULL |
+	palSetPadMode(ENCODER_NSS_GPIO, ENCODER_NSS_PIN, PAL_MODE_OUTPUT_PUSHPULL |
                            PAL_STM32_OSPEED_HIGHEST);
-	palSetPad(GPIOA, GPIOA_LRCK);
+	palSetPad(ENCODER_NSS_GPIO, ENCODER_NSS_PIN);
     spiStart(&SPID1, &encoderSPI);
 
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);

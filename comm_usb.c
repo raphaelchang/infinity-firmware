@@ -321,8 +321,6 @@ const SerialUSBConfig serusbcfg = {
 };
 
 void comm_usb_serial_init(void) {
-	palSetPadMode(GPIOA, 11, PAL_MODE_ALTERNATE(10));
-	palSetPadMode(GPIOA, 12, PAL_MODE_ALTERNATE(10));
 	sduObjectInit(&SDU1);
 	sduStart(&SDU1, &serusbcfg);
 

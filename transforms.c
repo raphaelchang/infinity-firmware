@@ -2,7 +2,7 @@
 #include <math.h>
 #include "utils.h"
 
-void transforms_park(float alpha, float beta, float theta, float *d, float *q)
+void transforms_park(volatile float alpha, volatile float beta, volatile float theta, volatile float *d, volatile float *q)
 {
     float sin, cos;
     utils_sincos(fmod(theta, 360), &sin, &cos);
@@ -10,7 +10,7 @@ void transforms_park(float alpha, float beta, float theta, float *d, float *q)
     *q = beta * cos - alpha * sin;
 }
 
-void transforms_inverse_park(float d, float q, float theta, float *alpha, float *beta)
+void transforms_inverse_park(volatile float d, volatile float q, volatile float theta, volatile float *alpha, volatile float *beta)
 {
     float sin, cos;
     utils_sincos(fmod(theta, 360), &sin, &cos);
@@ -18,13 +18,13 @@ void transforms_inverse_park(float d, float q, float theta, float *alpha, float 
     *beta = d * sin + q * cos;
 }
 
-void transforms_clarke(float a, float b, float c, float *alpha, float *beta)
+void transforms_clarke(volatile float a, volatile float b, volatile float c, volatile float *alpha, volatile float *beta)
 {
     *alpha = a;
     *beta = (0.577 * a) + (1.154 * b);
 }
 
-void transforms_inverse_clarke(float alpha, float beta, float *a, float *b, float *c)
+void transforms_inverse_clarke(volatile float alpha, volatile float beta, volatile float *a, volatile float *b, volatile float *c)
 {
     *a = alpha;
     *b = -alpha / 2.0 + (0.866 * beta);

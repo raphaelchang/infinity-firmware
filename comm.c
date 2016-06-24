@@ -5,8 +5,9 @@
 
 #include "ch.h"
 #include "hal.h"
+#include "config.h"
 
-static CommInterface comm = CAN;
+static volatile Config *config;
 
 static THD_WORKING_AREA(comm_update_wa, 1024);
 static THD_FUNCTION(comm_update, arg) {
@@ -15,7 +16,7 @@ static THD_FUNCTION(comm_update, arg) {
     chRegSetThreadName("Comm update");
 
     for(;;) {
-        switch(comm) {
+        switch(config->commInterface) {
             case CAN:
                 comm_can_update();
                 break;
@@ -41,7 +42,8 @@ static THD_FUNCTION(comm_update, arg) {
 
 void comm_init(void)
 {
-    switch(comm) {
+    config = config_get_configuration();
+    switch(config->commInterface) {
         case CAN:
             comm_can_init();
             break;

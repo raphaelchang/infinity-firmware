@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "math.h"
+#include "gpio.h"
+#include "config.h"
 
 static THD_WORKING_AREA(led_update_wa, 1024);
 static THD_FUNCTION(led_update, arg) {
@@ -28,9 +30,13 @@ static THD_FUNCTION(led_update, arg) {
     	}
     	else
     	{
-			ws2812b_set_all(0xFF0000);
-	        chThdSleepMilliseconds(250);
-			ws2812b_set_all(0);
+    		for (int i = 0; i < (int)fault; i++)
+    		{
+				ws2812b_set_all(0xFFA500);
+		        chThdSleepMilliseconds(250);
+				ws2812b_set_all(0);
+	        	chThdSleepMilliseconds(250);
+			}
 	        chThdSleepMilliseconds(250);
     	}
     }
@@ -43,10 +49,9 @@ int main(void) {
 
     chThdSleepMilliseconds(100);
 
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
-
+	gpio_init();
+	config_init();
+	
 	comm_init();
 	ws2812b_init();
     encoder_init();
