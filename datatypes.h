@@ -50,12 +50,17 @@ typedef enum
 
 typedef struct
 {
-	EncoderType encoderType;
-	CommInterface commInterface;
-	ZSMMode zsmMode;
-	uint8_t polePairs;
-	float encoderZero;
-	float pwmFrequency;
+	volatile EncoderType encoderType;
+	volatile CommInterface commInterface;
+	volatile ZSMMode zsmMode;
+	volatile uint8_t polePairs;
+	volatile float encoderZero;
+	volatile float pwmFrequency;
 } Config;
+
+typedef enum
+{
+	PACKET_CONSOLE = 0
+} PacketID;
 
 #endif

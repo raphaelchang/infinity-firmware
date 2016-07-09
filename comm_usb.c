@@ -1,5 +1,6 @@
 #include "ch.h"
 #include "hal.h"
+#include "packet.h"
 
 /*
  * Endpoints to be used for USBD1.
@@ -320,6 +321,72 @@ const SerialUSBConfig serusbcfg = {
 		USBD1_INTERRUPT_REQUEST_EP
 };
 
+#define SERIAL_RX_BUFFER_SIZE		2048
+static uint8_t serial_rx_buffer[SERIAL_RX_BUFFER_SIZE];
+static int serial_rx_read_pos = 0;
+static int serial_rx_write_pos = 0;
+static THD_WORKING_AREA(serial_read_thread_wa, 512);
+static THD_WORKING_AREA(serial_process_thread_wa, 4096);
+static mutex_t send_mutex;
+static thread_t *process_tp;
+
+static THD_FUNCTION(serial_read_thread, arg) {
+	(void)arg;
+
+	chRegSetThreadName("USB-Serial read");
+
+	uint8_t buffer[128];
+	int i;
+	int len;
+	int had_data = 0;
+
+	for(;;) {
+		len = chSequentialStreamRead(&SDU1, (uint8_t*) buffer, 1);
+
+		for (i = 0; i < len; i++) {
+			serial_rx_buffer[serial_rx_write_pos++] = buffer[i];
+
+			if (serial_rx_write_pos == SERIAL_RX_BUFFER_SIZE) {
+				serial_rx_write_pos = 0;
+			}
+
+			had_data = 1;
+		}
+
+		if (had_data) {
+			chEvtSignal(process_tp, (eventmask_t) 1);
+			had_data = 0;
+		}
+	    chThdSleepMilliseconds(1);
+	}
+}
+
+static THD_FUNCTION(serial_process_thread, arg) {
+	(void)arg;
+
+	chRegSetThreadName("USB-Serial process");
+
+	process_tp = chThdGetSelfX();
+
+	for(;;) {
+		chEvtWaitAny((eventmask_t) 1);
+
+		while (serial_rx_read_pos != serial_rx_write_pos) {
+			packet_process_byte(serial_rx_buffer[serial_rx_read_pos++]);
+
+			if (serial_rx_read_pos == SERIAL_RX_BUFFER_SIZE) {
+				serial_rx_read_pos = 0;
+			}
+		}
+	}
+}
+
+void comm_usb_send(unsigned char *buffer, unsigned int len) {
+	chMtxLock(&send_mutex);
+	chSequentialStreamWrite(&SDU1, buffer, len);
+	chMtxUnlock(&send_mutex);
+}
+
 void comm_usb_serial_init(void) {
 	sduObjectInit(&SDU1);
 	sduStart(&SDU1, &serusbcfg);
@@ -333,6 +400,11 @@ void comm_usb_serial_init(void) {
 	chThdSleepMilliseconds(1500);
 	usbStart(serusbcfg.usbp, &usbcfg);
 	usbConnectBus(serusbcfg.usbp);
+
+	chMtxObjectInit(&send_mutex);
+
+	chThdCreateStatic(serial_read_thread_wa, sizeof(serial_read_thread_wa), NORMALPRIO, serial_read_thread, NULL);
+	chThdCreateStatic(serial_process_thread_wa, sizeof(serial_process_thread_wa), NORMALPRIO, serial_process_thread, NULL);
 }
 
 int comm_usb_serial_is_active(void) {

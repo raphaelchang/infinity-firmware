@@ -123,7 +123,7 @@ CSRC = $(STARTUPSRC) \
        $(CHIBIOS)/os/various/syscalls.c \
        $(CHIBIOS)/os/various/shell.c \
        main.c as5x45.c as5x47.c comm_can.c comm_i2c.c comm_uart.c comm_usb.c comm.c \
-       controller.c encoder.c transforms.c ws2812b.c zsm.c utils.c gpio.c config.c
+       controller.c encoder.c transforms.c ws2812b.c zsm.c utils.c gpio.c config.c packet.c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
@@ -237,7 +237,7 @@ build/$(PROJECT).bin: build/$(PROJECT).elf
 
 # Program
 upload: build/$(PROJECT).bin
-	sudo dfu-util -a 0 -D build/$(PROJECT).bin -S 357E33633235 -s 0x08000000
+	sudo dfu-util -a 0 -D build/$(PROJECT).bin -S 3550336B3235 -s 0x08000000
 
 RULESPATH = $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC
 include $(RULESPATH)/rules.mk

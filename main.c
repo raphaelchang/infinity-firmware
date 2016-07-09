@@ -47,10 +47,9 @@ int main(void) {
 	halInit();
 	chSysInit();
 
-    chThdSleepMilliseconds(100);
-
 	gpio_init();
 	config_init();
+    chThdSleepMilliseconds(250);
 	
 	comm_init();
 	ws2812b_init();
@@ -61,7 +60,7 @@ int main(void) {
     chThdCreateStatic(led_update_wa, sizeof(led_update_wa), NORMALPRIO, led_update, NULL);
 	for(;;)
 	{
-		controller_print_adc();
-		chThdSleepMilliseconds(100);
+		// controller_print();
+		chThdSleepMilliseconds(1);
 	}
 }

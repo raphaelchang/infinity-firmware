@@ -8,5 +8,6 @@
 
 void encoder_init(void);
 float encoder_get_angle(void);
+float encoder_get_raw_angle(void);
 
 #endif

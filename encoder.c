@@ -63,3 +63,25 @@ float encoder_get_angle(void)
     }
     return edeg;
 }
+
+
+float encoder_get_raw_angle(void)
+{
+    float deg = 0;
+    switch(config->encoderType) {
+        case AS5045B:
+        case AS5145B:
+            deg = as5x45_get_angle();
+            break;
+        case AS5x47P:
+            deg = as5x47_get_angle();
+            break;
+        case HALL:
+            break;
+        case SENSORLESS:
+            break;
+        default:
+            break;
+    }
+    return deg;
+}

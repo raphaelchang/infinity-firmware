@@ -12,7 +12,7 @@
 #include "config.h"
 
 #define SYSTEM_CORE_CLOCK       168000000
-#define DEAD_TIME_CYCLES          60
+#define DEAD_TIME_CYCLES        0x80 | 60
 
 #define SET_DUTY(duty1, duty2, duty3) \
         TIM1->CR1 |= TIM_CR1_UDIS; \
@@ -25,13 +25,16 @@
 #define CHECK_CURRENT(adc) (adc > 500 && adc < 4096 - 500)
 
 static volatile Config *config;
-static volatile ControllerState state = ZEROING;
+static volatile ControllerState state = RUNNING;
 static volatile ControllerFault fault = NO_FAULT;
 static volatile uint16_t ADC_Value[3];
 
 static volatile int adc1;
 static volatile int adc2;
 static volatile int adc3;
+static volatile float currA;
+static volatile float currB;
+static volatile float currC;
 static volatile int e = 0;
 static volatile float angle = 0;
 static volatile float a, b, c;
@@ -214,9 +217,9 @@ void controller_update(void)
         fault = OVERCURRENT;
         return;
     }
-    float currA = ((int16_t)adc1 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
-    float currB = ((int16_t)adc2 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
-    float currC = ((int16_t)adc3 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
+    currA = ((int16_t)adc1 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
+    currB = ((int16_t)adc2 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
+    currC = ((int16_t)adc3 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
     // Check for ADC measurements that happened when the low side PWM was too short
     if (lastDutyCycle[0] > 0.9)
     {
@@ -244,10 +247,11 @@ void controller_update(void)
         case RUNNING:
             angle = encoder_get_angle();
             float alpha, beta;
-            transforms_inverse_park(0, 1.0, angle, &alpha, &beta);
+            transforms_inverse_park(0, 0.1, angle, &alpha, &beta);
             transforms_inverse_clarke(alpha, beta, &a, &b, &c);
             controller_apply_zsm(&a, &b, &c);
             SET_DUTY(a, b, c);
+            // SET_DUTY(0,0,0);
             lastDutyCycle[0] = a;
             lastDutyCycle[1] = b;
             lastDutyCycle[2] = c;
@@ -256,14 +260,15 @@ void controller_update(void)
             if (e++ < 4000)
             {
                 float alpha, beta;
-                transforms_inverse_park(0.25, 0, 0, &alpha, &beta);
+                transforms_inverse_park(0.2, 0, 0, &alpha, &beta);
                 transforms_inverse_clarke(alpha, beta, &a, &b, &c);
                 controller_apply_zsm(&a, &b, &c);
                 SET_DUTY(a, b, c);
-                angle = encoder_get_angle();
+                angle = encoder_get_raw_angle();
                 lastDutyCycle[0] = a;
                 lastDutyCycle[1] = b;
                 lastDutyCycle[2] = c;
+                config->encoderZero = angle;
             }
             else
             {
@@ -275,14 +280,9 @@ void controller_update(void)
 
 }
 
-void controller_print_adc(void)
+void controller_print(void)
 {
-    // if (state == ZEROING)
-    {
-        USB_PRINT("%f\n", angle);
-    }
-    USB_PRINT("%d %d %d\n", adc1, adc2, adc3);
-    USB_PRINT("%d %d %d\n", (int)(a * TIM1->ARR), (int)(b * TIM1->ARR), (int)(c * TIM1->ARR));
+    USB_PRINT("%f, %f, %f, %f, %d, %d, %d, %f, %f, %f\n", angle, a, b, c, adc1, adc2, adc3, currA, currB, currC);
 }
 
 void controller_apply_zsm(volatile float *a, volatile float *b, volatile float *c)

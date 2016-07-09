@@ -8,9 +8,9 @@ void config_init(void)
 {
     config.encoderType = AS5x47P;
     config.commInterface = CAN;
-    config.zsmMode = BOTTOM_CLAMP;
+    config.zsmMode = SINUSOIDAL;
     config.polePairs = 7;
-    config.encoderZero = 0.0f;
+    config.encoderZero = 221.0f;
     config.pwmFrequency = 20000.0;
 }
 
