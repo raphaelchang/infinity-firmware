@@ -12,6 +12,7 @@
 #include "math.h"
 #include "gpio.h"
 #include "config.h"
+#include "packet.h"
 
 static THD_WORKING_AREA(led_update_wa, 1024);
 static THD_FUNCTION(led_update, arg) {
@@ -23,10 +24,35 @@ static THD_FUNCTION(led_update, arg) {
     	ControllerFault fault = controller_get_fault();
     	if (fault == NO_FAULT)
     	{
-			ws2812b_set_all(0x0000FF);
-	        chThdSleepMilliseconds(500);
-			ws2812b_set_all(0);
-	        chThdSleepMilliseconds(500);
+    		if (packet_connect_event())
+    		{
+				ws2812b_set_all(0x00FFFF);
+		        chThdSleepMilliseconds(100);
+				ws2812b_set_all(0);
+		        chThdSleepMilliseconds(100);
+				ws2812b_set_all(0x00FFFF);
+		        chThdSleepMilliseconds(100);
+				ws2812b_set_all(0);
+		        chThdSleepMilliseconds(100);
+				ws2812b_set_all(0x00FFFF);
+		        chThdSleepMilliseconds(100);
+				ws2812b_set_all(0);
+		        chThdSleepMilliseconds(100);
+    		}
+    		else if (comm_usb_serial_is_active())
+    		{
+				ws2812b_set_all(0x0000FF);
+		        chThdSleepMilliseconds(250);
+				ws2812b_set_all(0);
+		        chThdSleepMilliseconds(250);
+    		}
+    		else
+    		{
+				ws2812b_set_all(0x0000FF);
+		        chThdSleepMilliseconds(500);
+				ws2812b_set_all(0);
+		        chThdSleepMilliseconds(500);
+		    }
     	}
     	else
     	{
@@ -61,6 +87,6 @@ int main(void) {
 	for(;;)
 	{
 		// controller_print();
-		chThdSleepMilliseconds(1);
+		chThdSleepMilliseconds(10);
 	}
 }

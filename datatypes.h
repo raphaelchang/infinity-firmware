@@ -60,7 +60,8 @@ typedef struct
 
 typedef enum
 {
-	PACKET_CONSOLE = 0
+	PACKET_CONNECT = 0,
+	PACKET_CONSOLE = 1,
 } PacketID;
 
 #endif

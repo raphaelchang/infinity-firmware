@@ -1,6 +1,7 @@
 #include "ch.h"
 #include "hal.h"
 #include "packet.h"
+#include "comm_usb.h"
 
 /*
  * Endpoints to be used for USBD1.
@@ -321,7 +322,7 @@ const SerialUSBConfig serusbcfg = {
 		USBD1_INTERRUPT_REQUEST_EP
 };
 
-#define SERIAL_RX_BUFFER_SIZE		2048
+#define SERIAL_RX_BUFFER_SIZE		(2048)
 static uint8_t serial_rx_buffer[SERIAL_RX_BUFFER_SIZE];
 static int serial_rx_read_pos = 0;
 static int serial_rx_write_pos = 0;
@@ -333,7 +334,7 @@ static thread_t *process_tp;
 static THD_FUNCTION(serial_read_thread, arg) {
 	(void)arg;
 
-	chRegSetThreadName("USB-Serial read");
+	chRegSetThreadName("USB serial read");
 
 	uint8_t buffer[128];
 	int i;
@@ -345,6 +346,7 @@ static THD_FUNCTION(serial_read_thread, arg) {
 
 		for (i = 0; i < len; i++) {
 			serial_rx_buffer[serial_rx_write_pos++] = buffer[i];
+			USB_PRINT("%d\n", buffer[i]);
 
 			if (serial_rx_write_pos == SERIAL_RX_BUFFER_SIZE) {
 				serial_rx_write_pos = 0;
@@ -364,7 +366,7 @@ static THD_FUNCTION(serial_read_thread, arg) {
 static THD_FUNCTION(serial_process_thread, arg) {
 	(void)arg;
 
-	chRegSetThreadName("USB-Serial process");
+	chRegSetThreadName("USB serial process");
 
 	process_tp = chThdGetSelfX();
 

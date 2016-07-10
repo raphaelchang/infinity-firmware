@@ -6,13 +6,14 @@
 #include "comm_usb.h"
 #include <string.h>
 #include <stdio.h>
+#include "console.h"
 
 static uint16_t packet_index;
 static uint8_t packet_buffer[2048];
 static bool in_packet = false;
+static bool connect_event = false;
 
 static void process_packet(unsigned char *data, unsigned int len);
-static void packet_printf(char* format, ...);
 
 void packet_process_byte(uint8_t byte)
 {
@@ -43,44 +44,15 @@ static void process_packet(unsigned char *data, unsigned int len)
 	len--;
 	switch(id)
 	{
+		case PACKET_CONNECT:
+			connect_event = true;
+			break;
 		case PACKET_CONSOLE:
 			data[len] = '\0';
-			enum { kMaxArgs = 64 };
-			int argc = 0;
-			char *argv[kMaxArgs];
-
-			char *p2 = strtok(data, " ");
-			while (p2 && argc < kMaxArgs) {
-				argv[argc++] = p2;
-				p2 = strtok(0, " ");
-			}
-			if (strcmp(argv[0], "ping") == 0) {
-				packet_printf("pong\n");
-				packet_printf("\r\n");
-			}
-			else
-			{
-				packet_printf("%s: command not found\n", argv[0]);
-				packet_printf("\r\n");
-			}
+			console_process_command(data);
 			break;
 		default:
 			break;
-	}
-}
-
-static void packet_printf(char* format, ...) {
-	va_list arg;
-	va_start (arg, format);
-	int len;
-	static char print_buffer[255];
-
-	print_buffer[0] = PACKET_CONSOLE + '0';
-	len = vsnprintf(print_buffer+1, 254, format, arg);
-	va_end (arg);
-
-	if(len > 0) {
-		packet_send_packet((unsigned char*)print_buffer, (len<254)? len+1: 255);
 	}
 }
 
@@ -92,4 +64,14 @@ void packet_send_packet(unsigned char *data, unsigned int len)
 	memcpy(buffer + inx, data, len);
 	inx += len;
 	comm_usb_send(buffer, inx);
+}
+
+bool packet_connect_event(void)
+{
+	if (connect_event)
+	{
+		connect_event = false;
+		return true;
+	}
+	return false;
 }
