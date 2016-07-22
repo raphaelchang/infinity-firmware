@@ -21,72 +21,72 @@ static THD_FUNCTION(led_update, arg) {
     chRegSetThreadName("LED update");
 
     for(;;) {
-    	ControllerFault fault = controller_get_fault();
-    	if (fault == NO_FAULT)
-    	{
-    		if (packet_connect_event())
-    		{
-				ws2812b_set_all(0x00FFFF);
-		        chThdSleepMilliseconds(100);
-				ws2812b_set_all(0);
-		        chThdSleepMilliseconds(100);
-				ws2812b_set_all(0x00FFFF);
-		        chThdSleepMilliseconds(100);
-				ws2812b_set_all(0);
-		        chThdSleepMilliseconds(100);
-				ws2812b_set_all(0x00FFFF);
-		        chThdSleepMilliseconds(100);
-				ws2812b_set_all(0);
-		        chThdSleepMilliseconds(100);
-    		}
-    		else if (comm_usb_serial_is_active())
-    		{
-				ws2812b_set_all(0x0000FF);
-		        chThdSleepMilliseconds(250);
-				ws2812b_set_all(0);
-		        chThdSleepMilliseconds(250);
-    		}
-    		else
-    		{
-				ws2812b_set_all(0x0000FF);
-		        chThdSleepMilliseconds(500);
-				ws2812b_set_all(0);
-		        chThdSleepMilliseconds(500);
-		    }
-    	}
-    	else
-    	{
-    		for (int i = 0; i < (int)fault; i++)
-    		{
-				ws2812b_set_all(0xFFA500);
-		        chThdSleepMilliseconds(250);
-				ws2812b_set_all(0);
-	        	chThdSleepMilliseconds(250);
-			}
-	        chThdSleepMilliseconds(250);
-    	}
+        ControllerFault fault = controller_get_fault();
+        if (fault == NO_FAULT)
+        {
+            if (packet_connect_event())
+            {
+                ws2812b_set_all(0x00FFFF);
+                chThdSleepMilliseconds(100);
+                ws2812b_set_all(0);
+                chThdSleepMilliseconds(100);
+                ws2812b_set_all(0x00FFFF);
+                chThdSleepMilliseconds(100);
+                ws2812b_set_all(0);
+                chThdSleepMilliseconds(100);
+                ws2812b_set_all(0x00FFFF);
+                chThdSleepMilliseconds(100);
+                ws2812b_set_all(0);
+                chThdSleepMilliseconds(100);
+            }
+            else if (comm_usb_serial_is_active())
+            {
+                ws2812b_set_all(0x0000FF);
+                chThdSleepMilliseconds(250);
+                ws2812b_set_all(0);
+                chThdSleepMilliseconds(250);
+            }
+            else
+            {
+                ws2812b_set_all(0x0000FF);
+                chThdSleepMilliseconds(500);
+                ws2812b_set_all(0);
+                chThdSleepMilliseconds(500);
+            }
+        }
+        else
+        {
+            for (int i = 0; i < (int)fault; i++)
+            {
+                ws2812b_set_all(0xFFA500);
+                chThdSleepMilliseconds(250);
+                ws2812b_set_all(0);
+                chThdSleepMilliseconds(250);
+            }
+            chThdSleepMilliseconds(250);
+        }
     }
 }
 
 
 int main(void) {
-	halInit();
-	chSysInit();
+    halInit();
+    chSysInit();
 
-	gpio_init();
-	config_init();
+    gpio_init();
+    config_init();
     chThdSleepMilliseconds(250);
-	
-	comm_init();
-	ws2812b_init();
+
+    comm_init();
+    ws2812b_init();
     encoder_init();
-	controller_init();
-	comm_usb_serial_init();
+    controller_init();
+    comm_usb_serial_init();
 
     chThdCreateStatic(led_update_wa, sizeof(led_update_wa), NORMALPRIO, led_update, NULL);
-	for(;;)
-	{
-		// controller_print();
-		chThdSleepMilliseconds(10);
-	}
+    for(;;)
+    {
+        controller_print();
+        chThdSleepMilliseconds(10);
+    }
 }

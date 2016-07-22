@@ -12,7 +12,7 @@
 #include "config.h"
 
 #define SYSTEM_CORE_CLOCK       168000000
-#define DEAD_TIME_CYCLES        0x80 | 60
+#define DEAD_TIME_CYCLES        60
 
 #define SET_DUTY(duty1, duty2, duty3) \
         TIM1->CR1 |= TIM_CR1_UDIS; \
@@ -35,6 +35,8 @@ static volatile int adc3;
 static volatile float currA;
 static volatile float currB;
 static volatile float currC;
+static volatile float currD;
+static volatile float currQ;
 static volatile int e = 0;
 static volatile float angle = 0;
 static volatile float a, b, c;
@@ -217,9 +219,9 @@ void controller_update(void)
         fault = OVERCURRENT;
         return;
     }
-    currA = ((int16_t)adc1 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
+    currC = ((int16_t)adc1 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
     currB = ((int16_t)adc2 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
-    currC = ((int16_t)adc3 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
+    currA = ((int16_t)adc3 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
     // Check for ADC measurements that happened when the low side PWM was too short
     if (lastDutyCycle[0] > 0.9)
     {
@@ -251,10 +253,11 @@ void controller_update(void)
             transforms_inverse_clarke(alpha, beta, &a, &b, &c);
             controller_apply_zsm(&a, &b, &c);
             SET_DUTY(a, b, c);
-            // SET_DUTY(0,0,0);
             lastDutyCycle[0] = a;
             lastDutyCycle[1] = b;
             lastDutyCycle[2] = c;
+            transforms_clarke(currA, currB, currC, &alpha, &beta);
+            transforms_park(alpha, beta, angle, &currD, &currQ);
             break;
         case ZEROING:
             if (e++ < 4000)
@@ -282,7 +285,7 @@ void controller_update(void)
 
 void controller_print(void)
 {
-    USB_PRINT("%f, %f, %f, %f, %d, %d, %d, %f, %f, %f\n", angle, a, b, c, adc1, adc2, adc3, currA, currB, currC);
+    USB_PRINT("%f, %f, %f, %f, %d, %d, %d, %f, %f, %f, %f, %f\n", angle, a, b, c, adc1, adc2, adc3, currA, currB, currC, currD, currQ);
 }
 
 void controller_apply_zsm(volatile float *a, volatile float *b, volatile float *c)

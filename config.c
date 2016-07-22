@@ -7,7 +7,7 @@ static volatile Config config;
 void config_init(void)
 {
     config.encoderType = AS5x47P;
-    config.commInterface = CAN;
+    config.commInterface = NUNCHUK;
     config.zsmMode = SINUSOIDAL;
     config.polePairs = 7;
     config.encoderZero = 221.0f;

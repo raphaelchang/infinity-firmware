@@ -8,6 +8,10 @@ void gpio_init(void)
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
+    
+    palSetPadMode(GPIOA, 3, PAL_MODE_OUTPUT_PUSHPULL |
+                        PAL_STM32_OSPEED_HIGHEST);
+    palClearPad(GPIOA, 3);
 
     // PWM
     palSetPadMode(PWM_A_HIGH_GPIO, PWM_A_HIGH_PIN, PAL_MODE_ALTERNATE(GPIO_AF_TIM1) |

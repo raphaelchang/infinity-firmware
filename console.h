@@ -1,8 +1,8 @@
-#ifndef CONSOLE_H_
-#define CONSOLE_H_
+#ifndef _CONSOLE_H_
+#define _CONSOLE_H_
 
 #include "ch.h"
 
 void console_process_command(char *command);
 
-#endif /* CONSOLE_H_ */
+#endif /* _CONSOLE_H_ */

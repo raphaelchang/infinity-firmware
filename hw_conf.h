@@ -47,4 +47,10 @@
 #define CURRENT_AMP_GAIN 20
 #define V_REG 3.3
 
+// I2C
+#define I2C_DEV I2CD1
+#define I2C_GPIO GPIOB
+#define I2C_SCL_PIN 6
+#define I2C_SDA_PIN 7
+
 #endif

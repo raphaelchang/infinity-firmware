@@ -2,6 +2,7 @@
 #include "comm_can.h"
 #include "comm_i2c.h"
 #include "comm_uart.h"
+#include "comm_nunchuk.h"
 
 #include "ch.h"
 #include "hal.h"
@@ -29,6 +30,7 @@ static THD_FUNCTION(comm_update, arg) {
             case PPM:
                 break;
             case NUNCHUK:
+                comm_nunchuk_update();
                 break;
             case NRF:
                 break;
@@ -58,6 +60,7 @@ void comm_init(void)
         case PPM:
             break;
         case NUNCHUK:
+            comm_nunchuk_init();
             break;
         case NRF:
             break;
