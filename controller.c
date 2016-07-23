@@ -41,6 +41,7 @@ static volatile int e = 0;
 static volatile float angle = 0;
 static volatile float a, b, c;
 static volatile float lastDutyCycle[3];
+static volatile float commandDutyCycle = 0.0;
 
 CH_IRQ_HANDLER(ADC1_2_3_IRQHandler) {
     CH_IRQ_PROLOGUE();
@@ -245,11 +246,13 @@ void controller_update(void)
     switch(state)
     {
         case STOPPED:
+            angle = encoder_get_angle();
+            SET_DUTY(0, 0, 0);
             break;
         case RUNNING:
             angle = encoder_get_angle();
             float alpha, beta;
-            transforms_inverse_park(0, 0.1, angle, &alpha, &beta);
+            transforms_inverse_park(0, commandDutyCycle, angle, &alpha, &beta);
             transforms_inverse_clarke(alpha, beta, &a, &b, &c);
             controller_apply_zsm(&a, &b, &c);
             SET_DUTY(a, b, c);
@@ -281,6 +284,23 @@ void controller_update(void)
             break;
     }
 
+}
+
+void controller_set_duty(float duty)
+{
+    commandDutyCycle = duty;
+}
+
+void controller_set_running(bool enable)
+{
+    if (enable)
+    {
+        state = RUNNING;
+    }
+    else
+    {
+        state = STOPPED;
+    }
 }
 
 void controller_print(void)

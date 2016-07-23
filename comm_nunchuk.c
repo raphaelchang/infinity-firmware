@@ -97,6 +97,15 @@ void comm_nunchuk_update(void)
             bool btn_z = !((rxbuf[5] >> 0) & 1);
             bool btn_c = !((rxbuf[5] >> 1) & 1);
             USB_PRINT("%d %d %d %d %d %d %d\n", x, y, acc_x, acc_y, acc_z, btn_z, btn_c);
+            if (btn_c)
+            {
+                controller_set_running(true);
+                controller_set_duty((y - 128) / 128.0 / 5.0);
+            }
+            else
+            {
+                controller_set_running(false);
+            }
         }
     } else {
         i2cAcquireBus(&I2C_DEV);
