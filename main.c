@@ -77,7 +77,7 @@ int main(void) {
     config_init();
     chThdSleepMilliseconds(250);
 
-    comm_init();
+    /*comm_init();*/
     ws2812b_init();
     encoder_init();
     controller_init();
@@ -87,6 +87,6 @@ int main(void) {
     for(;;)
     {
         controller_print();
-        chThdSleepMilliseconds(10);
+        chThdSleepMilliseconds(1);
     }
 }

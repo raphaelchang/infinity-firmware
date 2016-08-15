@@ -7,5 +7,7 @@
 #include "datatypes.h"
 
 void comm_init(void);
+void comm_set_usb_override(bool enable);
+bool comm_get_usb_override(void);
 
 #endif

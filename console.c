@@ -6,6 +6,7 @@
 #include "comm_usb.h"
 #include <string.h>
 #include <stdio.h>
+#include "comm.h"
 
 static void console_printf(char* format, ...);
 
@@ -50,6 +51,14 @@ void console_process_command(char *command)
                     states[tp->p_state], tp->p_name, (uint32_t)tp->p_time);
             tp = chRegNextThread(tp);
         } while (tp != NULL);
+        console_printf("\r\n");
+    }
+    else if (strcmp(argv[0], "usb_override_set") == 0) {
+        comm_set_usb_override(true);
+        console_printf("\r\n");
+    }
+    else if (strcmp(argv[0], "usb_override_unset") == 0) {
+        comm_set_usb_override(false);
         console_printf("\r\n");
     }
     else

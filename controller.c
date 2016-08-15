@@ -10,38 +10,70 @@
 #include "zsm.h"
 #include "datatypes.h"
 #include "config.h"
+#include <string.h>
+#include "utils.h"
 
 #define SYSTEM_CORE_CLOCK       168000000
 #define DEAD_TIME_CYCLES        60
 
 #define SET_DUTY(duty1, duty2, duty3) \
         TIM1->CR1 |= TIM_CR1_UDIS; \
-        TIM1->CCR1 = (int)(duty1 * TIM1->ARR); \
+        TIM1->CCR1 = (int)(duty3 * TIM1->ARR); \
         TIM1->CCR2 = (int)(duty2 * TIM1->ARR); \
-        TIM1->CCR3 = (int)(duty3 * TIM1->ARR); \
+        TIM1->CCR3 = (int)(duty1 * TIM1->ARR); \
         TIM1->CCR4 = TIM1->ARR - 2; \
         TIM1->CR1 &= ~TIM_CR1_UDIS;
 
 #define CHECK_CURRENT(adc) (adc > 500 && adc < 4096 - 500)
+
+typedef struct {
+    float edeg;
+    float i_a;
+    float i_b;
+    float i_c;
+    float i_alpha;
+    float i_beta;
+    float i_d;
+    float i_q;
+    float i_bus;
+    float i_abs;
+    float v_a;
+    float v_b;
+    float v_c;
+    float v_a_norm;
+    float v_b_norm;
+    float v_c_norm;
+    float v_alpha;
+    float v_beta;
+    float v_alpha_norm;
+    float v_beta_norm;
+    float v_d;
+    float v_q;
+    float v_d_norm;
+    float v_q_norm;
+    float v_bus;
+    float integral_d;
+    float integral_q;
+} motor_state_t;
 
 static volatile Config *config;
 static volatile ControllerState state = RUNNING;
 static volatile ControllerFault fault = NO_FAULT;
 static volatile uint16_t ADC_Value[3];
 
-static volatile int adc1;
-static volatile int adc2;
-static volatile int adc3;
-static volatile float currA;
-static volatile float currB;
-static volatile float currC;
-static volatile float currD;
-static volatile float currQ;
+static volatile motor_state_t motor_state;
+static volatile int adc1_1;
+static volatile int adc2_1;
+static volatile int adc3_1;
+static volatile int adc1_2;
+static volatile int adc2_2;
+static volatile int adc3_2;
+static volatile float temp;
 static volatile int e = 0;
-static volatile float angle = 0;
 static volatile float a, b, c;
-static volatile float lastDutyCycle[3];
 static volatile float commandDutyCycle = 0.0;
+
+static void apply_zsm(volatile float *a, volatile float *b, volatile float *c);
 
 CH_IRQ_HANDLER(ADC1_2_3_IRQHandler) {
     CH_IRQ_PROLOGUE();
@@ -55,6 +87,7 @@ CH_IRQ_HANDLER(ADC1_2_3_IRQHandler) {
 void controller_init(void)
 {
     config = config_get_configuration();
+    memset((void*)&motor_state, 0, sizeof(motor_state_t));
     TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
     TIM_OCInitTypeDef  TIM_OCInitStructure;
     TIM_BDTRInitTypeDef TIM_BDTRInitStructure;
@@ -168,20 +201,24 @@ void controller_init(void)
     // ADC_ExternalTrigInjectedConvConfig(ADC2, ADC_ExternalTrigInjecConv_T8_CC2);
     ADC_ExternalTrigInjectedConvEdgeConfig(ADC1, ADC_ExternalTrigInjecConvEdge_Falling);
     // ADC_ExternalTrigInjectedConvEdgeConfig(ADC2, ADC_ExternalTrigInjecConvEdge_Falling);
-    ADC_InjectedSequencerLengthConfig(ADC1, 1);
-    ADC_InjectedSequencerLengthConfig(ADC2, 1);
-    ADC_InjectedSequencerLengthConfig(ADC3, 1);
-    // ADC_InjectedSequencerLengthConfig(ADC2, 2);
+    ADC_InjectedSequencerLengthConfig(ADC1, 3);
+    ADC_InjectedSequencerLengthConfig(ADC2, 3);
+    ADC_InjectedSequencerLengthConfig(ADC3, 2);
 
     // ADC1 regular channels
     ADC_InjectedChannelConfig(ADC1, CURR_A_CHANNEL, 1, ADC_SampleTime_15Cycles);
+    ADC_InjectedChannelConfig(ADC1, VSENSE_A_CHANNEL, 2, ADC_SampleTime_15Cycles);
+    ADC_InjectedChannelConfig(ADC1, VBUS_CHANNEL, 3, ADC_SampleTime_15Cycles);
     // ADC_RegularChannelConfig(ADC1, ADC_Channel_Vrefint, 3, ADC_SampleTime_15Cycles);
 
     // ADC2 regular channels
     ADC_InjectedChannelConfig(ADC2, CURR_B_CHANNEL, 1, ADC_SampleTime_15Cycles);
+    ADC_InjectedChannelConfig(ADC2, VSENSE_B_CHANNEL, 2, ADC_SampleTime_15Cycles);
+    ADC_InjectedChannelConfig(ADC2, NTC_CHANNEL, 3, ADC_SampleTime_15Cycles);
 
     // ADC3 regular channels
     ADC_InjectedChannelConfig(ADC3, CURR_C_CHANNEL, 1, ADC_SampleTime_15Cycles);
+    ADC_InjectedChannelConfig(ADC3, VSENSE_C_CHANNEL, 2, ADC_SampleTime_15Cycles);
 
     // Interrupt
     ADC_ITConfig(ADC1, ADC_IT_JEOC, ENABLE);
@@ -205,62 +242,84 @@ void controller_init(void)
     WWDG_SetPrescaler(WWDG_Prescaler_1);
     WWDG_SetWindowValue(255);
     WWDG_Enable(100);
+
+    palSetPad(EN_GATE_GPIO, EN_GATE_PIN);
 }
 
 /* Updates the controller state machine. Called as an interrupt handler on new ADC sample. */
 void controller_update(void)
 {
     WWDG_SetCounter(100);
-    adc1 = ADC_GetInjectedConversionValue(ADC1, ADC_InjectedChannel_1);
-    adc2 = ADC_GetInjectedConversionValue(ADC2, ADC_InjectedChannel_1);
-    adc3 = ADC_GetInjectedConversionValue(ADC3, ADC_InjectedChannel_1);
-    if (fault == OVERCURRENT || !(CHECK_CURRENT(adc1) && CHECK_CURRENT(adc2) && CHECK_CURRENT(adc3)))
+    adc1_1 = ADC_GetInjectedConversionValue(ADC1, ADC_InjectedChannel_1);
+    adc2_1 = ADC_GetInjectedConversionValue(ADC2, ADC_InjectedChannel_1);
+    adc3_1 = ADC_GetInjectedConversionValue(ADC3, ADC_InjectedChannel_1);
+    adc1_2 = ADC_GetInjectedConversionValue(ADC1, ADC_InjectedChannel_2);
+    adc2_2 = ADC_GetInjectedConversionValue(ADC2, ADC_InjectedChannel_2);
+    adc3_2 = ADC_GetInjectedConversionValue(ADC3, ADC_InjectedChannel_2);
+    int adc1_3 = ADC_GetInjectedConversionValue(ADC1, ADC_InjectedChannel_3);
+    int adc2_3 = ADC_GetInjectedConversionValue(ADC2, ADC_InjectedChannel_3);
+    motor_state.v_bus = adc1_3 * (V_REG / 4095.0) * (VBUS_R1 + VBUS_R2) / VBUS_R2;
+    /*temp = (1.0 / ((logf(((4095.0 * 10000.0) / adc2_3 - 10000.0) / 10000.0) / 3434.0) + (1.0 / 298.15)) - 273.15);*/
+    if (fault == OVERCURRENT || !(CHECK_CURRENT(adc1_1) && CHECK_CURRENT(adc2_1) && CHECK_CURRENT(adc3_1)))
     {
         SET_DUTY(0, 0, 0);
+        palClearPad(EN_GATE_GPIO, EN_GATE_PIN);
         fault = OVERCURRENT;
         return;
     }
-    currC = ((int16_t)adc1 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
-    currB = ((int16_t)adc2 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
-    currA = ((int16_t)adc3 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
+    motor_state.i_a = ((int16_t)adc1_1 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
+    motor_state.i_b = ((int16_t)adc2_1 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
+    motor_state.i_c = ((int16_t)adc3_1 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
     // Check for ADC measurements that happened when the low side PWM was too short
-    if (lastDutyCycle[0] > 0.9)
+    if (motor_state.v_a_norm > 0.95)
     {
-        currA = -(currB + currC);
+        motor_state.i_a = -(motor_state.i_b + motor_state.i_c);
     }
-    else if (lastDutyCycle[1] > 0.9)
+    else if (motor_state.v_b_norm > 0.95)
     {
-        currB = -(currA + currC);
+        motor_state.i_b = -(motor_state.i_a + motor_state.i_c);
     }
-    else if (lastDutyCycle[2] > 0.9)
+    else if (motor_state.v_c_norm > 0.95)
     {
-        currC = -(currA + currB);
+        motor_state.i_c = -(motor_state.i_a + motor_state.i_b);
     }
     // If all are good, use all the balanced current assumption to use all three channels to improve each channel's measurement
-    else if (lastDutyCycle[0] <= 0.95 && lastDutyCycle[1] <= 0.95 && lastDutyCycle[2] <= 0.95)
+    else if (motor_state.v_a_norm <= 0.95 && motor_state.v_b_norm <= 0.95 && motor_state.v_c_norm <= 0.95)
     {
-        currA = currA / 2.0 - (currB + currC) / 2.0;
-        currB = currB / 2.0 - (currA + currC) / 2.0;
-        currC = currC / 2.0 - (currA + currB) / 2.0;
+        motor_state.i_a = motor_state.i_a / 2.0 - (motor_state.i_b + motor_state.i_c) / 2.0;
+        motor_state.i_b = motor_state.i_b / 2.0 - (motor_state.i_a + motor_state.i_c) / 2.0;
+        motor_state.i_c = motor_state.i_c / 2.0 - (motor_state.i_a + motor_state.i_b) / 2.0;
     }
+    const float dt = 1.0 / config->pwmFrequency;
     switch(state)
     {
         case STOPPED:
-            angle = encoder_get_angle();
+            motor_state.edeg = encoder_get_angle();
             SET_DUTY(0, 0, 0);
             break;
         case RUNNING:
-            angle = encoder_get_angle();
-            float alpha, beta;
-            transforms_inverse_park(0, commandDutyCycle, angle, &alpha, &beta);
-            transforms_inverse_clarke(alpha, beta, &a, &b, &c);
-            controller_apply_zsm(&a, &b, &c);
-            SET_DUTY(a, b, c);
-            lastDutyCycle[0] = a;
-            lastDutyCycle[1] = b;
-            lastDutyCycle[2] = c;
-            transforms_clarke(currA, currB, currC, &alpha, &beta);
-            transforms_park(alpha, beta, angle, &currD, &currQ);
+            motor_state.edeg = encoder_get_angle();
+            transforms_clarke(motor_state.i_a, motor_state.i_b, motor_state.i_c, &motor_state.i_alpha, &motor_state.i_beta);
+            transforms_park(motor_state.i_alpha, motor_state.i_beta, motor_state.edeg, &motor_state.i_d, &motor_state.i_q);
+            float i_d_set = 0.0;
+            float i_q_set = 3.0;
+            float i_d_err = i_d_set - motor_state.i_d;
+            float i_q_err = i_q_set - motor_state.i_q;
+            motor_state.integral_d += i_d_err * config->currentKi * dt;
+            motor_state.integral_q += i_q_err * config->currentKi * dt;
+            utils_saturate_vector_2d((float*)&motor_state.integral_d, (float*)&motor_state.integral_q,
+                    (2.0 / 3.0) * config->maxDuty * SQRT3_BY_2 * motor_state.v_bus);
+            // TODO: Add back-EMF as feed forward term
+            motor_state.v_d = motor_state.integral_d + i_d_err * config->currentKp;
+            motor_state.v_q = motor_state.integral_q + i_q_err * config->currentKp;
+            motor_state.v_d_norm = motor_state.v_d / ((2.0 / 3.0) * motor_state.v_bus);
+            motor_state.v_q_norm = motor_state.v_q / ((2.0 / 3.0) * motor_state.v_bus);
+            utils_saturate_vector_2d((float*)&motor_state.v_d_norm, (float*)&motor_state.v_q_norm,
+                    SQRT3_BY_2 * config->maxDuty);
+            transforms_inverse_park(motor_state.v_d_norm, motor_state.v_q_norm, motor_state.edeg, &motor_state.v_alpha_norm, &motor_state.v_beta_norm);
+            transforms_inverse_clarke(motor_state.v_alpha_norm, motor_state.v_beta_norm, &motor_state.v_a_norm, &motor_state.v_b_norm, &motor_state.v_c_norm);
+            apply_zsm(&motor_state.v_a_norm, &motor_state.v_b_norm, &motor_state.v_c_norm);
+            SET_DUTY(motor_state.v_a_norm, motor_state.v_b_norm, motor_state.v_c_norm);
             break;
         case ZEROING:
             if (e++ < 4000)
@@ -268,13 +327,10 @@ void controller_update(void)
                 float alpha, beta;
                 transforms_inverse_park(0.2, 0, 0, &alpha, &beta);
                 transforms_inverse_clarke(alpha, beta, &a, &b, &c);
-                controller_apply_zsm(&a, &b, &c);
+                apply_zsm(&a, &b, &c);
                 SET_DUTY(a, b, c);
-                angle = encoder_get_raw_angle();
-                lastDutyCycle[0] = a;
-                lastDutyCycle[1] = b;
-                lastDutyCycle[2] = c;
-                config->encoderZero = angle;
+                motor_state.edeg = encoder_get_raw_angle();
+                config->encoderZero = motor_state.edeg; 
             }
             else
             {
@@ -288,6 +344,14 @@ void controller_update(void)
 
 void controller_set_duty(float duty)
 {
+    if (duty > 1.0)
+    {
+        duty = 1.0;
+    }
+    else if (duty < -1.0)
+    {
+        duty = -1.0;
+    }
     commandDutyCycle = duty;
 }
 
@@ -305,10 +369,10 @@ void controller_set_running(bool enable)
 
 void controller_print(void)
 {
-    USB_PRINT("%f, %f, %f, %f, %d, %d, %d, %f, %f, %f, %f, %f\n", angle, a, b, c, adc1, adc2, adc3, currA, currB, currC, currD, currQ);
+    USB_PRINT("%f, %f, %f, %f, %d, %d, %d, %f, %f, %f, %f, %f, %f, %f\n", motor_state.edeg, motor_state.v_a_norm, motor_state.v_b_norm, motor_state.v_c_norm, adc1_1, adc2_1, adc3_1, motor_state.i_a, motor_state.i_b, motor_state.i_c, motor_state.i_d, motor_state.i_q, motor_state.v_d, motor_state.v_q);
 }
 
-void controller_apply_zsm(volatile float *a, volatile float *b, volatile float *c)
+static void apply_zsm(volatile float *a, volatile float *b, volatile float *c)
 {
     switch(config->zsmMode)
     {

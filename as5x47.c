@@ -58,7 +58,7 @@ void as5x47_init(void)
 	nvicEnableVector(TIM4_IRQn, 6);
 
 	// Enable overflow interrupt
-	// TIM_ITConfig(TIM4, TIM_IT_Update, ENABLE);
+	//TIM_ITConfig(TIM4, TIM_IT_Update, ENABLE);
 
 	// Enable timers
 	TIM_Cmd(TIM4, ENABLE);

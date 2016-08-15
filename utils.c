@@ -63,3 +63,22 @@ void utils_sincos(float angle, float *sin, float *cos) {
         }
     }
 }
+
+bool utils_saturate_vector_2d(float *x, float *y, float max) {
+    bool retval = false;
+    float mag = sqrtf(*x * *x + *y * *y);
+    max = fabsf(max);
+
+    if (mag < 1e-10) {
+        mag = 1e-10;
+    }
+
+    if (mag > max) {
+        const float f = max / mag;
+        *x *= f;
+        *y *= f;
+        retval = true;
+    }
+
+    return retval;
+}

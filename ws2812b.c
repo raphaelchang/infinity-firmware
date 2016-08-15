@@ -61,8 +61,8 @@ void ws2812b_init(void) {
 	// DMA clock enable
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
 
-	DMA_DeInit(DMA1_Stream7);
-	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&TIM3->CCR3;
+	DMA_DeInit(DMA1_Stream2);
+	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&TIM3->CCR4;
 
 	DMA_InitStructure.DMA_Channel = DMA_Channel_5;
 	DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)bitbuffer;
@@ -79,7 +79,7 @@ void ws2812b_init(void) {
 	DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
 	DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
 
-	DMA_Init(DMA1_Stream7, &DMA_InitStructure);
+	DMA_Init(DMA1_Stream2, &DMA_InitStructure);
 
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
 
@@ -92,22 +92,22 @@ void ws2812b_init(void) {
 
 	TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
 
-	// Channel 3 Configuration in PWM mode
+	// Channel 4 Configuration in PWM mode
 	TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
 	TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
 	TIM_OCInitStructure.TIM_Pulse = bitbuffer[0];
 	TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
 
-	TIM_OC3Init(TIM3, &TIM_OCInitStructure);
-	TIM_OC3PreloadConfig(TIM3, TIM_OCPreload_Enable);
+	TIM_OC4Init(TIM3, &TIM_OCInitStructure);
+	TIM_OC4PreloadConfig(TIM3, TIM_OCPreload_Enable);
 
 	// TIM4 counter enable
 	TIM_Cmd(TIM3, ENABLE);
 
-	DMA_Cmd(DMA1_Stream7, ENABLE);
+	DMA_Cmd(DMA1_Stream2, ENABLE);
 
 	// TIM4 Update DMA Request enable
-	TIM_DMACmd(TIM3, TIM_DMA_CC3, ENABLE);
+	TIM_DMACmd(TIM3, TIM_DMA_CC4, ENABLE);
 
 	// Main Output Enable
 	TIM_CtrlPWMOutputs(TIM3, ENABLE);

@@ -237,7 +237,7 @@ build/$(PROJECT).bin: build/$(PROJECT).elf
 
 # Program
 upload: build/$(PROJECT).bin
-	sudo dfu-util -a 0 -D build/$(PROJECT).bin -S 3550336B3235 -s 0x08000000
+	sudo dfu-util -a 0 -D build/$(PROJECT).bin -S 3059396F3435 -s 0x08000000
 
 RULESPATH = $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC
 include $(RULESPATH)/rules.mk

@@ -5,7 +5,6 @@
 
 void controller_init(void);
 void controller_update(void);
-void controller_apply_zsm(volatile float *a, volatile float *b, volatile float *c);
 void controller_print(void);
 void controller_set_duty(float duty);
 void controller_set_running(bool enable);
