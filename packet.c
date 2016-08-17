@@ -72,7 +72,7 @@ static void process_packet(unsigned char *data, unsigned int len)
         case PACKET_SET_CURRENT:
             if (comm_get_usb_override())
             {
-                /*controller_set_duty(parse_int16(data, 0) / 10000.0);*/
+                controller_set_current(parse_int16(data, 0) / 1000.0);
             }
             break;
         default:

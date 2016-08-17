@@ -8,13 +8,13 @@ void config_init(void)
 {
     config.encoderType = AS5x47P;
     config.commInterface = NUNCHUK;
-    config.zsmMode = SINUSOIDAL;
+    config.zsmMode = BOTTOM_CLAMP;
     config.polePairs = 7;
     config.encoderZero = 221.0f;
     config.pwmFrequency = 20000.0;
     config.currentKp = 0.1;
     config.currentKi = 50.0;
-    config.maxDuty = 0.5;
+    config.maxDuty = 0.8;
 }
 
 Config* config_get_configuration(void)

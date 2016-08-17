@@ -57,7 +57,7 @@ typedef struct {
 } motor_state_t;
 
 static volatile Config *config;
-static volatile ControllerState state = RUNNING;
+static volatile ControllerState state = STOPPED;
 static volatile ControllerFault fault = NO_FAULT;
 static volatile uint16_t ADC_Value[3];
 
@@ -72,8 +72,11 @@ static volatile float temp;
 static volatile int e = 0;
 static volatile float a, b, c;
 static volatile float commandDutyCycle = 0.0;
+static volatile float commandCurrent = 0.0;
 
 static void apply_zsm(volatile float *a, volatile float *b, volatile float *c);
+static void disable_pwm(void);
+static void enable_pwm(void);
 
 CH_IRQ_HANDLER(ADC1_2_3_IRQHandler) {
     CH_IRQ_PROLOGUE();
@@ -236,7 +239,7 @@ void controller_init(void)
     TIM_Cmd(TIM1, ENABLE);
     TIM_CtrlPWMOutputs(TIM1, ENABLE);
 
-    SET_DUTY(0, 0, 0);
+    disable_pwm();
 
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_WWDG, ENABLE);
     WWDG_SetPrescaler(WWDG_Prescaler_1);
@@ -302,7 +305,7 @@ void controller_update(void)
             transforms_clarke(motor_state.i_a, motor_state.i_b, motor_state.i_c, &motor_state.i_alpha, &motor_state.i_beta);
             transforms_park(motor_state.i_alpha, motor_state.i_beta, motor_state.edeg, &motor_state.i_d, &motor_state.i_q);
             float i_d_set = 0.0;
-            float i_q_set = 3.0;
+            float i_q_set = commandCurrent;
             float i_d_err = i_d_set - motor_state.i_d;
             float i_q_err = i_q_set - motor_state.i_q;
             motor_state.integral_d += i_d_err * config->currentKi * dt;
@@ -353,18 +356,34 @@ void controller_set_duty(float duty)
         duty = -1.0;
     }
     commandDutyCycle = duty;
+    state = RUNNING;
+    enable_pwm();
 }
 
-void controller_set_running(bool enable)
+void controller_set_current(float current)
 {
-    if (enable)
+    if (current > 8.0)
     {
-        state = RUNNING;
+        current = 8.0;
     }
-    else
+    else if (current < -8.0)
     {
-        state = STOPPED;
+        current = -8.0;
     }
+    commandCurrent = current;
+    state = RUNNING;
+    enable_pwm();
+}
+
+void controller_disable(void)
+{
+    state = STOPPED;
+    disable_pwm();
+}
+
+float controller_get_bus_voltage(void)
+{
+    return motor_state.v_bus;
 }
 
 void controller_print(void)
@@ -392,6 +411,42 @@ static void apply_zsm(volatile float *a, volatile float *b, volatile float *c)
             zsm_top_clamp(a, b, c);
             break;
     }
+}
+
+static void disable_pwm(void)
+{
+    SET_DUTY(0, 0, 0);
+
+    TIM_SelectOCxM(TIM1, TIM_Channel_1, TIM_ForcedAction_InActive);
+    TIM_CCxCmd(TIM1, TIM_Channel_1, TIM_CCx_Enable);
+    TIM_CCxNCmd(TIM1, TIM_Channel_1, TIM_CCxN_Disable);
+
+    TIM_SelectOCxM(TIM1, TIM_Channel_2, TIM_ForcedAction_InActive);
+    TIM_CCxCmd(TIM1, TIM_Channel_2, TIM_CCx_Enable);
+    TIM_CCxNCmd(TIM1, TIM_Channel_2, TIM_CCxN_Disable);
+
+    TIM_SelectOCxM(TIM1, TIM_Channel_3, TIM_ForcedAction_InActive);
+    TIM_CCxCmd(TIM1, TIM_Channel_3, TIM_CCx_Enable);
+    TIM_CCxNCmd(TIM1, TIM_Channel_3, TIM_CCxN_Disable);
+
+    TIM_GenerateEvent(TIM1, TIM_EventSource_COM);
+}
+
+static void enable_pwm(void)
+{
+    TIM_SelectOCxM(TIM1, TIM_Channel_1, TIM_OCMode_PWM1);
+    TIM_CCxCmd(TIM1, TIM_Channel_1, TIM_CCx_Enable);
+    TIM_CCxNCmd(TIM1, TIM_Channel_1, TIM_CCxN_Enable);
+
+    TIM_SelectOCxM(TIM1, TIM_Channel_2, TIM_OCMode_PWM1);
+    TIM_CCxCmd(TIM1, TIM_Channel_2, TIM_CCx_Enable);
+    TIM_CCxNCmd(TIM1, TIM_Channel_2, TIM_CCxN_Enable);
+
+    TIM_SelectOCxM(TIM1, TIM_Channel_3, TIM_OCMode_PWM1);
+    TIM_CCxCmd(TIM1, TIM_Channel_3, TIM_CCx_Enable);
+    TIM_CCxNCmd(TIM1, TIM_Channel_3, TIM_CCxN_Enable);
+
+    TIM_GenerateEvent(TIM1, TIM_EventSource_COM);
 }
 
 ControllerFault controller_get_fault(void)

@@ -1,6 +1,10 @@
 #ifndef _UTILS_H_
 #define _UTILS_H_
 
+#define ONE_BY_SQRT3            (0.57735026919)
+#define TWO_BY_SQRT3            (2.0f * 0.57735026919)
+#define SQRT3_BY_2              (0.86602540378)
+
 #include "ch.h"
 #include "hal.h"
 

@@ -86,7 +86,7 @@ int main(void) {
     chThdCreateStatic(led_update_wa, sizeof(led_update_wa), NORMALPRIO, led_update, NULL);
     for(;;)
     {
-        controller_print();
+        /*controller_print();*/
         chThdSleepMilliseconds(1);
     }
 }

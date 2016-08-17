@@ -7,7 +7,9 @@ void controller_init(void);
 void controller_update(void);
 void controller_print(void);
 void controller_set_duty(float duty);
-void controller_set_running(bool enable);
+void controller_set_current(float current);
+void controller_disable(void);
+float controller_get_bus_voltage(void);
 ControllerFault controller_get_fault(void);
 ControllerState controller_get_state(void);
 

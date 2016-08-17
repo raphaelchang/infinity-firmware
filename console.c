@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "comm.h"
+#include "controller.h"
 
 static void console_printf(char* format, ...);
 
@@ -53,12 +54,45 @@ void console_process_command(char *command)
         } while (tp != NULL);
         console_printf("\r\n");
     }
+    else if (strcmp(argv[0], "voltage") == 0) {
+        float vbus = controller_get_bus_voltage();
+        console_printf("Bus voltage: %f volts\n", vbus);
+        console_printf("\r\n");
+    }
     else if (strcmp(argv[0], "usb_override_set") == 0) {
         comm_set_usb_override(true);
+        console_printf("Enabling USB control\n");
         console_printf("\r\n");
     }
     else if (strcmp(argv[0], "usb_override_unset") == 0) {
         comm_set_usb_override(false);
+        console_printf("Disabling USB control\n");
+        console_printf("\r\n");
+    }
+    else if (strcmp(argv[0], "current_set") == 0) {
+        if (argc == 2)
+        {
+            if (comm_get_usb_override())
+            {
+                float curr = 0.0;
+                sscanf(argv[1], "%f", &curr);
+                console_printf("Setting current to %f amps\n", curr);
+                controller_set_current(curr);
+            }
+            else
+            {
+                console_printf("USB control not enabled\n");
+            }
+        }
+        else
+        {
+            console_printf("Usage: current_set [current]\n");
+        }
+        console_printf("\r\n");
+    }
+    else if (strcmp(argv[0], "stop") == 0) {
+        console_printf("Stopping motor\n");
+        controller_disable();
         console_printf("\r\n");
     }
     else
@@ -75,7 +109,7 @@ static void console_printf(char* format, ...) {
     int len;
     static char print_buffer[255];
 
-    print_buffer[0] = PACKET_CONSOLE + '0';
+    print_buffer[0] = PACKET_CONSOLE;
     len = vsnprintf(print_buffer+1, 254, format, arg);
     va_end (arg);
 
