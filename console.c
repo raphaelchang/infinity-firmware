@@ -1,3 +1,4 @@
+#include "console.h"
 #include "packet.h"
 #include "datatypes.h"
 #include "ch.h"
@@ -8,8 +9,6 @@
 #include <stdio.h>
 #include "comm.h"
 #include "controller.h"
-
-static void console_printf(char* format, ...);
 
 void console_process_command(char *command)
 {
@@ -56,7 +55,7 @@ void console_process_command(char *command)
     }
     else if (strcmp(argv[0], "voltage") == 0) {
         float vbus = controller_get_bus_voltage();
-        console_printf("Bus voltage: %f volts\n", vbus);
+        console_printf("Bus voltage: %.2f volts\n", (double)vbus);
         console_printf("\r\n");
     }
     else if (strcmp(argv[0], "usb_override_set") == 0) {
@@ -76,7 +75,7 @@ void console_process_command(char *command)
             {
                 float curr = 0.0;
                 sscanf(argv[1], "%f", &curr);
-                console_printf("Setting current to %f amps\n", curr);
+                console_printf("Setting current to %.2f amps\n", (double)curr);
                 controller_set_current(curr);
             }
             else
@@ -95,6 +94,25 @@ void console_process_command(char *command)
         controller_disable();
         console_printf("\r\n");
     }
+    else if (strcmp(argv[0], "zero") == 0) {
+        console_printf("Finding encoder zero...\n");
+        float zero;
+        bool inverted;
+        bool result = controller_encoder_zero(10.0, &zero, &inverted);
+        if (result)
+        {
+            console_printf("Found zero: %.2f\n", (double)zero);
+            if (inverted)
+                console_printf("Encoder inverted\n");
+            else
+                console_printf("Encoder not inverted\n");
+        }
+        else
+        {
+            console_printf("Zeroing failed\n");
+        }
+        console_printf("\r\n");
+    }
     else
     {
         console_printf("%s: command not found\n", argv[0]);
@@ -103,7 +121,7 @@ void console_process_command(char *command)
     }
 }
 
-static void console_printf(char* format, ...) {
+void console_printf(char* format, ...) {
     va_list arg;
     va_start (arg, format);
     int len;

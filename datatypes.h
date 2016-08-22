@@ -55,10 +55,12 @@ typedef struct
     volatile ZSMMode zsmMode;
     volatile uint8_t polePairs;
     volatile float encoderZero;
+    volatile bool encoderInverted;
     volatile float pwmFrequency;
     volatile float currentKp;
     volatile float currentKi;
     volatile float maxDuty;
+    volatile float maxCurrent;
 } Config;
 
 typedef enum

@@ -12,6 +12,7 @@
 #include "config.h"
 #include <string.h>
 #include "utils.h"
+#include "console.h"
 
 #define SYSTEM_CORE_CLOCK       168000000
 #define DEAD_TIME_CYCLES        60
@@ -72,7 +73,11 @@ static volatile float temp;
 static volatile int e = 0;
 static volatile float a, b, c;
 static volatile float commandDutyCycle = 0.0;
-static volatile float commandCurrent = 0.0;
+static volatile float commandCurrentQ = 0.0;
+static volatile float commandCurrentD = 0.0;
+static volatile bool overrideAngle = false;
+static volatile float angleToOverride;
+static volatile bool pwmEnabled = false;
 
 static void apply_zsm(volatile float *a, volatile float *b, volatile float *c);
 static void disable_pwm(void);
@@ -91,6 +96,9 @@ void controller_init(void)
 {
     config = config_get_configuration();
     memset((void*)&motor_state, 0, sizeof(motor_state_t));
+    overrideAngle = false;
+    pwmEnabled = false;
+
     TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
     TIM_OCInitTypeDef  TIM_OCInitStructure;
     TIM_BDTRInitTypeDef TIM_BDTRInitStructure;
@@ -302,10 +310,14 @@ void controller_update(void)
             break;
         case RUNNING:
             motor_state.edeg = encoder_get_angle();
+            if (overrideAngle)
+            {
+                motor_state.edeg = angleToOverride;
+            }
             transforms_clarke(motor_state.i_a, motor_state.i_b, motor_state.i_c, &motor_state.i_alpha, &motor_state.i_beta);
             transforms_park(motor_state.i_alpha, motor_state.i_beta, motor_state.edeg, &motor_state.i_d, &motor_state.i_q);
-            float i_d_set = 0.0;
-            float i_q_set = commandCurrent;
+            float i_d_set = commandCurrentD;
+            float i_q_set = commandCurrentQ;
             float i_d_err = i_d_set - motor_state.i_d;
             float i_q_err = i_q_set - motor_state.i_q;
             motor_state.integral_d += i_d_err * config->currentKi * dt;
@@ -357,33 +369,76 @@ void controller_set_duty(float duty)
     }
     commandDutyCycle = duty;
     state = RUNNING;
-    enable_pwm();
+    if (!pwmEnabled)
+        enable_pwm();
 }
 
 void controller_set_current(float current)
 {
-    if (current > 8.0)
+    if (current > config->maxCurrent)
     {
-        current = 8.0;
+        current = config->maxCurrent;
     }
-    else if (current < -8.0)
+    else if (current < -config->maxCurrent)
     {
-        current = -8.0;
+        current = -config->maxCurrent;
     }
-    commandCurrent = current;
+    commandCurrentQ = current;
+    commandCurrentD = 0.0;
     state = RUNNING;
-    enable_pwm();
+    if (!pwmEnabled)
+        enable_pwm();
 }
 
 void controller_disable(void)
 {
     state = STOPPED;
-    disable_pwm();
+    motor_state.integral_d = 0.0;
+    motor_state.integral_q = 0.0;
+    if (pwmEnabled)
+        disable_pwm();
 }
 
 float controller_get_bus_voltage(void)
 {
     return motor_state.v_bus;
+}
+
+bool controller_encoder_zero(float current, float *zero, bool *inverted)
+{
+    overrideAngle = true;
+    angleToOverride = 0.0;
+    commandCurrentQ = 0.0;
+    commandCurrentD = current;
+    state = RUNNING;
+    if (!pwmEnabled)
+        enable_pwm();
+    chThdSleepMilliseconds(800);
+    *zero = encoder_get_raw_angle();
+    commandCurrentD = current / 2.0;
+    float i = 0;
+    float deg = *zero;
+    int incCount = 0;
+    for (i = 1.0; i <= 180.0; i++)
+    {
+        angleToOverride = i;
+        chThdSleepMilliseconds(1);
+        float temp = encoder_get_raw_angle();
+        if (temp > deg)
+        {
+            incCount++;
+        }
+        else if (temp < deg)
+        {
+            incCount--;
+        }
+        deg = temp;
+    }
+    *inverted = incCount < 0;
+    commandCurrentQ = commandCurrentD = 0.0;
+    overrideAngle = false;
+    controller_disable();
+    return true;
 }
 
 void controller_print(void)
@@ -430,6 +485,8 @@ static void disable_pwm(void)
     TIM_CCxNCmd(TIM1, TIM_Channel_3, TIM_CCxN_Disable);
 
     TIM_GenerateEvent(TIM1, TIM_EventSource_COM);
+
+    pwmEnabled = false;
 }
 
 static void enable_pwm(void)
@@ -447,6 +504,8 @@ static void enable_pwm(void)
     TIM_CCxNCmd(TIM1, TIM_Channel_3, TIM_CCxN_Enable);
 
     TIM_GenerateEvent(TIM1, TIM_EventSource_COM);
+
+    pwmEnabled = true;
 }
 
 ControllerFault controller_get_fault(void)

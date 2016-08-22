@@ -44,6 +44,8 @@ float encoder_get_angle(void)
             {
                 deg += 360.0;
             }
+            if (config->encoderInverted)
+                deg = 360 - deg;
             edeg = fmod(deg, 360.0f / config->polePairs) * config->polePairs;
             break;
         case AS5x47P:
@@ -52,6 +54,8 @@ float encoder_get_angle(void)
             {
                 deg += 360.0;
             }
+            if (config->encoderInverted)
+                deg = 360 - deg;
             edeg = fmod(deg, 360.0f / config->polePairs) * config->polePairs;
             break;
         case HALL:
@@ -71,10 +75,10 @@ float encoder_get_raw_angle(void)
     switch(config->encoderType) {
         case AS5045B:
         case AS5145B:
-            deg = as5x45_get_angle();
+            deg = as5x45_get_raw_position();
             break;
         case AS5x47P:
-            deg = as5x47_get_angle();
+            deg = as5x47_get_last_angle();
             break;
         case HALL:
             break;

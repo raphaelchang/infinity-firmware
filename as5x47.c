@@ -86,6 +86,11 @@ uint16_t as5x47_get_raw_position(void)
 	return lastRawPosition;
 }
 
+float as5x47_get_last_angle(void)
+{
+    return 360.0 * (as5x47_get_raw_position() % 8192) / 8192.0;
+}
+
 static void spicb(SPIDriver *spip) {
 	chSysLockFromISR();
 	spiUnselectI(spip);
