@@ -6,6 +6,8 @@
 #include "hal.h"
 #include <math.h>
 
+static volatile int sys_lock_cnt = 0;
+
 /*
  * Fast approximation of sin and cos. Input is in degrees.
  */
@@ -81,4 +83,32 @@ bool utils_saturate_vector_2d(float *x, float *y, float max) {
     }
 
     return retval;
+}
+
+/**
+ * A system locking function with a counter. For every lock, a corresponding unlock must
+ * exist to unlock the system. That means, if lock is called five times, unlock has to
+ * be called five times as well. Note that chSysLock and chSysLockFromIsr are the same
+ * for this port.
+ */
+void utils_sys_lock_cnt(void) {
+    if (!sys_lock_cnt) {
+        chSysLock();
+    }
+    sys_lock_cnt++;
+}
+
+/**
+ * A system unlocking function with a counter. For every lock, a corresponding unlock must
+ * exist to unlock the system. That means, if lock is called five times, unlock has to
+ * be called five times as well. Note that chSysUnlock and chSysUnlockFromIsr are the same
+ * for this port.
+ */
+void utils_sys_unlock_cnt(void) {
+    if (sys_lock_cnt) {
+        sys_lock_cnt--;
+        if (!sys_lock_cnt) {
+            chSysUnlock();
+        }
+    }
 }

@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include "comm.h"
 #include "controller.h"
+#include "config.h"
 
 void console_process_command(char *command)
 {
@@ -111,6 +112,41 @@ void console_process_command(char *command)
         {
             console_printf("Zeroing failed\n");
         }
+        console_printf("\r\n");
+    }
+    else if (strcmp(argv[0], "res") == 0) {
+        console_printf("Measuring winding resistance...\n");
+        float res_tmp = 0.0;
+        float i_last = 0.0;
+        for (float i = 2.0; i < (30.0 / 2.0); i *= 1.5) {
+            res_tmp = controller_measure_resistance(i, 20);
+
+            if (i > (0.5 / res_tmp)) {
+                i_last = i;
+                break;
+            }
+        }
+
+        if (i_last < 0.01) {
+            i_last = (30.0 / 2.0);
+        }
+
+        float res = controller_measure_resistance(i_last, 500);
+        console_printf("Resistance at %.2f amps: %.4f ohms\n", i_last, res);
+        console_printf("\r\n");
+    }
+    else if (strcmp(argv[0], "write") == 0) {
+        console_printf("Writing configuration to EEPROM...\n");
+        bool res = config_write();
+        if (res)
+            console_printf("Done.\n");
+        else
+            console_printf("Failed.\n");
+        console_printf("\r\n");
+    }
+    else if (strcmp(argv[0], "read") == 0) {
+        Config temp;
+        config_read(&temp);
         console_printf("\r\n");
     }
     else

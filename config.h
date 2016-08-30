@@ -7,5 +7,7 @@
 
 void config_init(void);
 Config* config_get_configuration(void);
+bool config_write(void);
+void config_read(Config *conf);
 
 #endif

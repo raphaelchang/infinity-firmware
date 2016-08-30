@@ -7,7 +7,7 @@ typedef enum
 {
     STOPPED,
     RUNNING,
-    ZEROING
+    TONE
 } ControllerState;
 
 typedef enum

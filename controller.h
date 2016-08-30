@@ -11,7 +11,9 @@ void controller_set_current(float current);
 void controller_disable(void);
 float controller_get_bus_voltage(void);
 bool controller_encoder_zero(float current, float *zero, bool *inverted);
+float controller_measure_resistance(float current, uint16_t samples);
 ControllerFault controller_get_fault(void);
 ControllerState controller_get_state(void);
+float controller_get_command_current(void);
 
 #endif

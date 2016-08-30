@@ -52,4 +52,12 @@ void gpio_init(void)
     // USB
     palSetPadMode(GPIOA, 11, PAL_MODE_ALTERNATE(10));
     palSetPadMode(GPIOA, 12, PAL_MODE_ALTERNATE(10));
+
+    // CAN
+    palSetPadMode(CAN_RX_GPIO, CAN_RX_PIN, PAL_MODE_ALTERNATE(GPIO_AF_CAN1) |
+            PAL_STM32_OTYPE_PUSHPULL |
+            PAL_STM32_OSPEED_MID1);
+    palSetPadMode(CAN_TX_GPIO, CAN_TX_PIN, PAL_MODE_ALTERNATE(GPIO_AF_CAN1) |
+            PAL_STM32_OTYPE_PUSHPULL |
+            PAL_STM32_OSPEED_MID1);
 }

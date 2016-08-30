@@ -56,7 +56,7 @@ static THD_FUNCTION(comm_update, arg) {
                 case PPM:
                     break;
                 case NUNCHUK:
-                    //comm_nunchuk_update();
+                    comm_nunchuk_update();
                     break;
                 case NRF:
                     break;

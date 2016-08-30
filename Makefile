@@ -108,7 +108,7 @@ include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_v7m.mk
 # Other files (optional).
 
 # Define linker script file here
-LDSCRIPT= $(STARTUPLD)/STM32F405xG.ld
+LDSCRIPT= STM32F405xG.ld
 
 # C sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
@@ -122,8 +122,8 @@ CSRC = $(STARTUPSRC) \
        $(CHIBIOS)/os/hal/lib/streams/chprintf.c \
        $(CHIBIOS)/os/various/syscalls.c \
        $(CHIBIOS)/os/various/shell.c \
-       main.c as5x45.c as5x47.c comm_can.c comm_i2c.c comm_uart.c comm_usb.c comm_nunchuk.c comm.c \
-       controller.c encoder.c transforms.c ws2812b.c zsm.c utils.c gpio.c config.c packet.c console.c
+       main.c as5x45.c as5x47.c comm_can.c comm_i2c.c comm_uart.c comm_usb.c comm_nunchuk.c comm.c eeprom.c \
+       controller.c encoder.c transforms.c ws2812b.c zsm.c utils.c gpio.c config.c packet.c console.c scope.c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.

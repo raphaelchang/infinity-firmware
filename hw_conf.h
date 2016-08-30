@@ -74,4 +74,10 @@
 #define I2C_SCL_PIN 6
 #define I2C_SDA_PIN 7
 
+// CAN
+#define CAN_RX_GPIO GPIOB
+#define CAN_RX_PIN 8
+#define CAN_TX_GPIO GPIOB
+#define CAN_TX_PIN 9
+
 #endif

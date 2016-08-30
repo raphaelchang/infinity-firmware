@@ -11,8 +11,10 @@
 #include "datatypes.h"
 #include "config.h"
 #include <string.h>
+#include <math.h>
 #include "utils.h"
 #include "console.h"
+#include "scope.h"
 
 #define SYSTEM_CORE_CLOCK       168000000
 #define DEAD_TIME_CYCLES        60
@@ -22,6 +24,41 @@
         TIM1->CCR1 = (int)(duty3 * TIM1->ARR); \
         TIM1->CCR2 = (int)(duty2 * TIM1->ARR); \
         TIM1->CCR3 = (int)(duty1 * TIM1->ARR); \
+        TIM1->CCR4 = TIM1->ARR - 2; \
+        TIM1->CR1 &= ~TIM_CR1_UDIS;
+
+#define SET_PWM_FREQ(freq) \
+        TIM1->CR1 |= TIM_CR1_UDIS; \
+        if (freq < 100) \
+        { \
+            TIM1->PSC = 31; \
+            TIM1->ARR = SYSTEM_CORE_CLOCK / 2 / (freq * 32); \
+        } \
+        else if (freq < 200) \
+        { \
+            TIM1->PSC = 15; \
+            TIM1->ARR = SYSTEM_CORE_CLOCK / 2 / (freq * 16); \
+        } \
+        else if (freq < 400) \
+        { \
+            TIM1->PSC = 7; \
+            TIM1->ARR = SYSTEM_CORE_CLOCK / 2 / (freq * 8); \
+        } \
+        else if (freq < 700) \
+        { \
+            TIM1->PSC = 3; \
+            TIM1->ARR = SYSTEM_CORE_CLOCK / 2 / (freq * 4); \
+        } \
+        else if (freq < 1300) \
+        { \
+            TIM1->PSC = 1; \
+            TIM1->ARR = SYSTEM_CORE_CLOCK / 2 / (freq * 2); \
+        } \
+        else \
+        { \
+            TIM1->PSC = 0; \
+            TIM1->ARR = SYSTEM_CORE_CLOCK / 2 / freq; \
+        } \
         TIM1->CCR4 = TIM1->ARR - 2; \
         TIM1->CR1 &= ~TIM_CR1_UDIS;
 
@@ -82,6 +119,7 @@ static volatile bool pwmEnabled = false;
 static void apply_zsm(volatile float *a, volatile float *b, volatile float *c);
 static void disable_pwm(void);
 static void enable_pwm(void);
+static void play_startup_tone(void);
 
 CH_IRQ_HANDLER(ADC1_2_3_IRQHandler) {
     CH_IRQ_PROLOGUE();
@@ -99,6 +137,7 @@ void controller_init(void)
     overrideAngle = false;
     pwmEnabled = false;
 
+    utils_sys_lock_cnt();
     TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
     TIM_OCInitTypeDef  TIM_OCInitStructure;
     TIM_BDTRInitTypeDef TIM_BDTRInitStructure;
@@ -249,12 +288,16 @@ void controller_init(void)
 
     disable_pwm();
 
+    utils_sys_unlock_cnt();
+
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_WWDG, ENABLE);
     WWDG_SetPrescaler(WWDG_Prescaler_1);
     WWDG_SetWindowValue(255);
     WWDG_Enable(100);
 
     palSetPad(EN_GATE_GPIO, EN_GATE_PIN);
+
+    play_startup_tone();
 }
 
 /* Updates the controller state machine. Called as an interrupt handler on new ADC sample. */
@@ -273,6 +316,7 @@ void controller_update(void)
     /*temp = (1.0 / ((logf(((4095.0 * 10000.0) / adc2_3 - 10000.0) / 10000.0) / 3434.0) + (1.0 / 298.15)) - 273.15);*/
     if (fault == OVERCURRENT || !(CHECK_CURRENT(adc1_1) && CHECK_CURRENT(adc2_1) && CHECK_CURRENT(adc3_1)))
     {
+        disable_pwm();
         SET_DUTY(0, 0, 0);
         palClearPad(EN_GATE_GPIO, EN_GATE_PIN);
         fault = OVERCURRENT;
@@ -336,22 +380,8 @@ void controller_update(void)
             apply_zsm(&motor_state.v_a_norm, &motor_state.v_b_norm, &motor_state.v_c_norm);
             SET_DUTY(motor_state.v_a_norm, motor_state.v_b_norm, motor_state.v_c_norm);
             break;
-        case ZEROING:
-            if (e++ < 4000)
-            {
-                float alpha, beta;
-                transforms_inverse_park(0.2, 0, 0, &alpha, &beta);
-                transforms_inverse_clarke(alpha, beta, &a, &b, &c);
-                apply_zsm(&a, &b, &c);
-                SET_DUTY(a, b, c);
-                motor_state.edeg = encoder_get_raw_angle();
-                config->encoderZero = motor_state.edeg; 
-            }
-            else
-            {
-                e = 0;
-                state = RUNNING;
-            }
+        case TONE:
+            SET_DUTY(0.005, 0, 0);
             break;
     }
 
@@ -434,11 +464,59 @@ bool controller_encoder_zero(float current, float *zero, bool *inverted)
         }
         deg = temp;
     }
+    if (incCount == 0)
+    {
+        return false;
+    }
     *inverted = incCount < 0;
     commandCurrentQ = commandCurrentD = 0.0;
     overrideAngle = false;
     controller_disable();
     return true;
+}
+
+float controller_measure_resistance(float current, uint16_t samples)
+{
+    overrideAngle = true;
+    angleToOverride = 0.0;
+    commandCurrentQ = current;
+    commandCurrentD = 0.0;
+    const float pwmFreqOld = config->pwmFrequency;
+    const float currentKpOld = config->currentKp;
+    const float currentKiOld = config->currentKi;
+    config->pwmFrequency = 10000.0;
+    config->currentKp = 0.01;
+    config->currentKi = 10.0;
+    SET_PWM_FREQ(config->pwmFrequency);
+    state = RUNNING;
+    if (!pwmEnabled)
+        enable_pwm();
+    chThdSleepMilliseconds(1000);
+
+    float current_sum = 0;
+    float voltage_sum = 0;
+    uint16_t i = 0;
+    for (i = 0; i < samples; i++)
+    {
+        const volatile float vd = motor_state.v_d;
+        const volatile float vq = motor_state.v_q;
+        const volatile float id = motor_state.i_d;
+        const volatile float iq = motor_state.i_q;
+
+        current_sum += sqrtf(id * id + iq * iq);
+        voltage_sum += sqrtf(vd * vd + vq * vq);
+        chThdSleepMilliseconds(1);
+    }
+    commandCurrentQ = commandCurrentD = 0.0;
+    overrideAngle = false;
+    controller_disable();
+    config->pwmFrequency = pwmFreqOld;
+    config->currentKp = currentKpOld;
+    config->currentKi = currentKiOld;
+    SET_PWM_FREQ(config->pwmFrequency);
+    float current_avg = current_sum / samples;
+    float voltage_avg = voltage_sum / samples;
+    return (voltage_avg / current_avg) * (2.0 / 3.0);
 }
 
 void controller_print(void)
@@ -516,4 +594,262 @@ ControllerFault controller_get_fault(void)
 ControllerState controller_get_state(void)
 {
     return state;
+}
+
+float controller_get_command_current(void)
+{
+    return commandCurrentQ;
+}
+
+typedef enum
+{
+    NOTE_C0 = 0,
+    NOTE_CS0,
+    NOTE_D0,
+    NOTE_DS0,
+    NOTE_E0,
+    NOTE_F0,
+    NOTE_FS0,
+    NOTE_G0,
+    NOTE_GS0,
+    NOTE_A0,
+    NOTE_AS0,
+    NOTE_B0,
+    NOTE_C1,
+    NOTE_CS1,
+    NOTE_D1,
+    NOTE_DS1,
+    NOTE_E1,
+    NOTE_F1,
+    NOTE_FS1,
+    NOTE_G1,
+    NOTE_GS1,
+    NOTE_A1,
+    NOTE_AS1,
+    NOTE_B1,
+    NOTE_C2,
+    NOTE_CS2,
+    NOTE_D2,
+    NOTE_DS2,
+    NOTE_E2,
+    NOTE_F2,
+    NOTE_FS2,
+    NOTE_G2,
+    NOTE_GS2,
+    NOTE_A2,
+    NOTE_AS2,
+    NOTE_B2,
+    NOTE_C3,
+    NOTE_CS3,
+    NOTE_D3,
+    NOTE_DS3,
+    NOTE_E3,
+    NOTE_F3,
+    NOTE_FS3,
+    NOTE_G3,
+    NOTE_GS3,
+    NOTE_A3,
+    NOTE_AS3,
+    NOTE_B3,
+    NOTE_C4,
+    NOTE_CS4,
+    NOTE_D4,
+    NOTE_DS4,
+    NOTE_E4,
+    NOTE_F4,
+    NOTE_FS4,
+    NOTE_G4,
+    NOTE_GS4,
+    NOTE_A4,
+    NOTE_AS4,
+    NOTE_B4,
+    NOTE_C5,
+    NOTE_CS5,
+    NOTE_D5,
+    NOTE_DS5,
+    NOTE_E5,
+    NOTE_F5,
+    NOTE_FS5,
+    NOTE_G5,
+    NOTE_GS5,
+    NOTE_A5,
+    NOTE_AS5,
+    NOTE_B5,
+    NOTE_C6,
+    NOTE_CS6,
+    NOTE_D6,
+    NOTE_DS6,
+    NOTE_E6,
+    NOTE_F6,
+    NOTE_FS6,
+    NOTE_G6,
+    NOTE_GS6,
+    NOTE_A6,
+    NOTE_AS6,
+    NOTE_B6,
+    NOTE_C7,
+    NOTE_CS7,
+    NOTE_D7,
+    NOTE_DS7,
+    NOTE_E7,
+    NOTE_F7,
+    NOTE_FS7,
+    NOTE_G7,
+    NOTE_GS7,
+    NOTE_A7,
+    NOTE_AS7,
+    NOTE_B7,
+    NOTE_C8,
+    NOTE_CS8,
+    NOTE_D8,
+    NOTE_DS8,
+    NOTE_E8,
+    NOTE_F8,
+    NOTE_FS8,
+    NOTE_G8,
+    NOTE_GS8,
+    NOTE_A8,
+    NOTE_AS8,
+    NOTE_B8,
+    NOTE_C9,
+    NOTE_CS9,
+    NOTE_D9,
+    NOTE_DS9,
+    NOTE_E9,
+    NOTE_F9,
+    NOTE_FS9,
+    NOTE_G9,
+    NOTE_GS9,
+    NOTE_A9,
+    NOTE_AS9,
+    NOTE_B9,
+} note_t;
+static float midi[120] = {16.3515978313, 17.3239144361, 18.3540479948, 19.4454364826, 20.6017223071, 21.8267644646, 23.1246514195, 24.4997147489, 25.9565435987, 27.5, 29.1352350949, 30.8677063285, 32.7031956626, 34.6478288721, 36.7080959897, 38.8908729653, 41.2034446141, 43.6535289291, 46.249302839, 48.9994294977, 51.9130871975, 55.0, 58.2704701898, 61.735412657, 65.4063913251, 69.2956577442, 73.4161919794, 77.7817459305, 82.4068892282, 87.3070578583, 92.4986056779, 97.9988589954, 103.826174395, 110.0, 116.54094038, 123.470825314, 130.81278265, 138.591315488, 146.832383959, 155.563491861, 164.813778456, 174.614115717, 184.997211356, 195.997717991, 207.65234879, 220.0, 233.081880759, 246.941650628, 261.625565301, 277.182630977, 293.664767917, 311.126983722, 329.627556913, 349.228231433, 369.994422712, 391.995435982, 415.30469758, 440.0, 466.163761518, 493.883301256, 523.251130601, 554.365261954, 587.329535835, 622.253967444, 659.255113826, 698.456462866, 739.988845423, 783.990871963, 830.60939516, 880.0, 932.327523036, 987.766602512, 1046.5022612, 1108.73052391, 1174.65907167, 1244.50793489, 1318.51022765, 1396.91292573, 1479.97769085, 1567.98174393, 1661.21879032, 1760.0, 1864.65504607, 1975.53320502, 2093.0045224, 2217.46104781, 2349.31814334, 2489.01586978, 2637.0204553, 2793.82585146, 2959.95538169, 3135.96348785, 3322.43758064, 3520.0, 3729.31009214, 3951.06641005, 4186.00904481, 4434.92209563, 4698.63628668, 4978.03173955, 5274.04091061, 5587.65170293, 5919.91076339, 6271.92697571, 6644.87516128, 7040.0, 7458.62018429, 7902.1328201, 8372.01808962, 8869.84419126, 9397.27257336, 9956.06347911, 10548.0818212, 11175.3034059, 11839.8215268, 12543.8539514, 13289.7503226, 14080.0, 14917.2403686, 15804.2656402};
+#define PLAY_NOTE(note, duration) \
+    SET_PWM_FREQ(midi[note]); \
+    chThdSleepMilliseconds(duration);
+#define PLAY_REST(duration) \
+    state = STOPPED; \
+    chThdSleepMilliseconds(duration); \
+    state = TONE;
+
+static void play_startup_tone(void)
+{
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_WWDG, DISABLE);
+    state = TONE;
+    if (!pwmEnabled)
+        enable_pwm();
+    PLAY_NOTE(NOTE_B4, 300);
+    PLAY_REST(100);
+    PLAY_NOTE(NOTE_B4, 300);
+    PLAY_REST(100);
+    PLAY_NOTE(NOTE_B4, 300);
+    PLAY_REST(500);
+    PLAY_NOTE(NOTE_B4, 150);
+    PLAY_NOTE(NOTE_D5, 150);
+    PLAY_NOTE(NOTE_E5, 150);
+    /*for (uint8_t i = NOTE_C2; i <= NOTE_B9; i++)*/
+    /*{*/
+        /*PLAY_NOTE(i, 100);*/
+    /*}*/
+    /*PLAY_REST(200);*/
+    /*PLAY_NOTE(NOTE_C4, 190);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_C4, 200);*/
+    /*PLAY_NOTE(NOTE_G4, 190);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_G4, 200);*/
+    /*PLAY_NOTE(NOTE_A4, 190);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_A4, 200);*/
+    /*PLAY_NOTE(NOTE_G4, 400);*/
+    /*PLAY_NOTE(NOTE_F4, 190);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_F4, 200);*/
+    /*PLAY_NOTE(NOTE_E4, 190);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_E4, 200);*/
+    /*PLAY_NOTE(NOTE_D4, 190);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_D4, 200);*/
+    /*PLAY_NOTE(NOTE_C4, 400);*/
+    /*PLAY_NOTE(NOTE_G4, 190);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_G4, 200);*/
+    /*PLAY_NOTE(NOTE_F4, 190);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_F4, 200);*/
+    /*PLAY_NOTE(NOTE_E4, 190);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_E4, 200);*/
+    /*PLAY_NOTE(NOTE_D4, 400);*/
+    /*PLAY_NOTE(NOTE_G4, 190);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_G4, 200);*/
+    /*PLAY_NOTE(NOTE_F4, 190);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_F4, 200);*/
+    /*PLAY_NOTE(NOTE_E4, 190);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_E4, 200);*/
+    /*PLAY_NOTE(NOTE_D4, 400);*/
+    /*PLAY_NOTE(NOTE_C4, 190);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_C4, 200);*/
+    /*PLAY_NOTE(NOTE_G4, 190);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_G4, 200);*/
+    /*PLAY_NOTE(NOTE_A4, 190);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_A4, 200);*/
+    /*PLAY_NOTE(NOTE_G4, 400);*/
+    /*PLAY_NOTE(NOTE_F4, 190);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_F4, 200);*/
+    /*PLAY_NOTE(NOTE_E4, 190);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_E4, 200);*/
+    /*PLAY_NOTE(NOTE_D4, 190);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_D4, 200);*/
+    /*PLAY_NOTE(NOTE_C4, 400);*/
+
+    /*PLAY_REST(200);*/
+    /*PLAY_NOTE(NOTE_G4, 290);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_G4, 100);*/
+    /*PLAY_NOTE(NOTE_A4, 400);*/
+    /*PLAY_NOTE(NOTE_G4, 400);*/
+    /*PLAY_NOTE(NOTE_C5, 400);*/
+    /*PLAY_NOTE(NOTE_B4, 800);*/
+
+    /*PLAY_NOTE(NOTE_G4, 290);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_G4, 100);*/
+    /*PLAY_NOTE(NOTE_A4, 400);*/
+    /*PLAY_NOTE(NOTE_G4, 400);*/
+    /*PLAY_NOTE(NOTE_D5, 400);*/
+    /*PLAY_NOTE(NOTE_C5, 800);*/
+
+    /*PLAY_NOTE(NOTE_G4, 290);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_G4, 100);*/
+    /*PLAY_NOTE(NOTE_G5, 400);*/
+    /*PLAY_NOTE(NOTE_E5, 400);*/
+    /*PLAY_NOTE(NOTE_C5, 400);*/
+    /*PLAY_NOTE(NOTE_B4, 400);*/
+    /*PLAY_NOTE(NOTE_A4, 800);*/
+
+    /*PLAY_NOTE(NOTE_F5, 290);*/
+    /*PLAY_REST(10);*/
+    /*PLAY_NOTE(NOTE_F5, 100);*/
+    /*PLAY_NOTE(NOTE_E5, 400);*/
+    /*PLAY_NOTE(NOTE_C5, 400);*/
+    /*PLAY_NOTE(NOTE_D5, 400);*/
+    /*PLAY_NOTE(NOTE_C5, 800);*/
+
+    state = STOPPED;
+    disable_pwm();
+    SET_PWM_FREQ(config->pwmFrequency);
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_WWDG, ENABLE);
 }

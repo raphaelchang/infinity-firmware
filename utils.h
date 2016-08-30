@@ -10,5 +10,7 @@
 
 void utils_sincos(float angle, float *sin, float *cos);
 bool utils_saturate_vector_2d(float *x, float *y, float max);
+void utils_sys_lock_cnt(void);
+void utils_sys_unlock_cnt(void);
 
 #endif
