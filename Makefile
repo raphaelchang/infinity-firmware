@@ -91,7 +91,7 @@ endif
 #
 
 # Define project name here
-PROJECT = rESC
+PROJECT = Infinity
 
 # Imported source files and paths
 CHIBIOS = ChibiOS_16.1.4
