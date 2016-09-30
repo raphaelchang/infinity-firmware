@@ -1,3 +1,5 @@
+#infinity-firmware
+Firmware for Infinity ESCs
 ##Setup
 Clone repostiory. 
 ```
