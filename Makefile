@@ -91,7 +91,7 @@ endif
 #
 
 # Define project name here
-PROJECT = Infinity
+PROJECT = infinity
 
 # Imported source files and paths
 CHIBIOS = ChibiOS_16.1.4
