@@ -25,8 +25,13 @@ void config_init(void)
     config.pwmFrequency = 20000.0;
     config.currentKp = 0.1;
     config.currentKi = 50.0;
-    config.maxDuty = 0.8;
+    config.maxDuty = 0.95;
     config.maxCurrent = 10.0;
+    config.pllKp = 2000.0;
+    config.pllKi = 20000.0;
+    config.speedKp = 0.005;
+    config.speedKi = 0.005;;
+    config.speedKd = 0.001;
 
     memset(VirtAddVarTab, 0, sizeof(VirtAddVarTab));
 

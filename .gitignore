@@ -2,5 +2,6 @@
 build/
 *.swp
 *.swo
+*.swn
 .cproject
 .project

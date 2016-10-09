@@ -1,6 +1,3 @@
-#ifndef M_PI
-#define M_PI           3.14159265358979323846
-#endif
 #include "utils.h"
 #include "ch.h"
 #include "hal.h"
@@ -110,5 +107,15 @@ void utils_sys_unlock_cnt(void) {
         if (!sys_lock_cnt) {
             chSysUnlock();
         }
+    }
+}
+
+void utils_norm_angle_rad(float *angle) {
+    while (*angle < -M_PI) {
+        *angle += 2.0 * M_PI;
+    }
+
+    while (*angle >  M_PI) {
+        *angle -= 2.0 * M_PI;
     }
 }

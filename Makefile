@@ -123,7 +123,7 @@ CSRC = $(STARTUPSRC) \
        $(CHIBIOS)/os/various/syscalls.c \
        $(CHIBIOS)/os/various/shell.c \
        main.c as5x45.c as5x47.c comm_can.c comm_i2c.c comm_uart.c comm_usb.c comm_nunchuk.c comm.c eeprom.c \
-       controller.c encoder.c transforms.c ws2812b.c zsm.c utils.c gpio.c config.c packet.c console.c scope.c
+       controller.c encoder.c transforms.c ws2812b.c led_rgb.c zsm.c utils.c gpio.c config.c packet.c console.c scope.c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.

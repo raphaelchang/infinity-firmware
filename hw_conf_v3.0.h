@@ -1,5 +1,5 @@
-#ifndef _HW_CONF_H_
-#define _HW_CONF_H_
+#ifndef _HW_CONF_V3_0_H_
+#define _HW_CONF_V3_0_H_
 
 #include "ch.h"
 #include "hal.h"

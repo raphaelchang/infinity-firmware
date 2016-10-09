@@ -3,7 +3,7 @@
 #include "stm32f4xx_conf.h"
 #include "comm_usb.h"
 #include "comm.h"
-#include "ws2812b.h"
+#include "led_rgb.h"
 #include "encoder.h"
 #include "controller.h"
 #include "chprintf.h"
@@ -28,17 +28,17 @@ static THD_FUNCTION(led_update, arg) {
         {
             if (packet_connect_event())
             {
-                ws2812b_set_all(0x00FFFF);
+                led_rgb_set(0x00FFFF);
                 chThdSleepMilliseconds(100);
-                ws2812b_set_all(0);
+                led_rgb_set(0);
                 chThdSleepMilliseconds(100);
-                ws2812b_set_all(0x00FFFF);
+                led_rgb_set(0x00FFFF);
                 chThdSleepMilliseconds(100);
-                ws2812b_set_all(0);
+                led_rgb_set(0);
                 chThdSleepMilliseconds(100);
-                ws2812b_set_all(0x00FFFF);
+                led_rgb_set(0x00FFFF);
                 chThdSleepMilliseconds(100);
-                ws2812b_set_all(0);
+                led_rgb_set(0);
                 chThdSleepMilliseconds(100);
             }
             else if (controller_get_state() == RUNNING)
@@ -47,45 +47,47 @@ static THD_FUNCTION(led_update, arg) {
                 if (command > 0.0) // Forward
                 {
                     float pcnt = command / config->maxCurrent;
-                    ws2812b_set_all(0x00FF00);
-                    chThdSleepMilliseconds((int)(pcnt * 400));
+                    led_rgb_set(0x00FF00);
+                    if (pcnt >= 1.0 / 400)
+                        chThdSleepMilliseconds((int)(pcnt * 400));
                     if (pcnt < 1.0)
                     {
-                        ws2812b_set_all(0);
+                        led_rgb_set(0);
                         chThdSleepMilliseconds((int)((1 - pcnt) * 400));
                     }
                 }
                 else if (command < 0.0) // Reverse
                 {
                     float pcnt = -command / config->maxCurrent;
-                    ws2812b_set_all(0xFF0000);
-                    chThdSleepMilliseconds((int)(pcnt * 400));
+                    led_rgb_set(0xFF0000);
+                    if (pcnt >= 1.0 / 400)
+                        chThdSleepMilliseconds((int)(pcnt * 400));
                     if (pcnt < 1.0)
                     {
-                        ws2812b_set_all(0);
+                        led_rgb_set(0);
                         chThdSleepMilliseconds((int)((1 - pcnt) * 400));
                     }
                 }
                 else // Neutral
                 {
-                    ws2812b_set_all(0xFFFF00);
+                    led_rgb_set(0xFF5500);
                     chThdSleepMilliseconds(350);
-                    ws2812b_set_all(0);
+                    led_rgb_set(0);
                     chThdSleepMilliseconds(50);
                 }
             }
             else if (comm_usb_serial_is_active())
             {
-                ws2812b_set_all(0x0000FF);
+                led_rgb_set(0x0000FF);
                 chThdSleepMilliseconds(250);
-                ws2812b_set_all(0);
+                led_rgb_set(0);
                 chThdSleepMilliseconds(250);
             }
             else
             {
-                ws2812b_set_all(0x0000FF);
+                led_rgb_set(0x0000FF);
                 chThdSleepMilliseconds(500);
-                ws2812b_set_all(0);
+                led_rgb_set(0);
                 chThdSleepMilliseconds(500);
             }
         }
@@ -93,9 +95,9 @@ static THD_FUNCTION(led_update, arg) {
         {
             for (int i = 0; i < (int)fault; i++)
             {
-                ws2812b_set_all(0xFFA500);
+                led_rgb_set(0xFF1100);
                 chThdSleepMilliseconds(250);
-                ws2812b_set_all(0);
+                led_rgb_set(0);
                 chThdSleepMilliseconds(250);
             }
             chThdSleepMilliseconds(250);
@@ -112,7 +114,7 @@ int main(void) {
     config_init();
     chThdSleepMilliseconds(250);
 
-    ws2812b_init();
+    led_rgb_init();
     encoder_init();
     scope_init();
     controller_init();
@@ -123,6 +125,6 @@ int main(void) {
     for(;;)
     {
         /*controller_print();*/
-        chThdSleepMilliseconds(1);
+        chThdSleepMilliseconds(10);
     }
 }

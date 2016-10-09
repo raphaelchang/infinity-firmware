@@ -21,8 +21,8 @@
  */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __EEPROM_H__
-#define __EEPROM_H__
+#ifndef _EEPROM_H_
+#define _EEPROM_H_
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_conf.h"
@@ -93,6 +93,6 @@ uint16_t EE_Init(void);
 uint16_t EE_ReadVariable(uint16_t VirtAddress, uint16_t* Data);
 uint16_t EE_WriteVariable(uint16_t VirtAddress, uint16_t Data);
 
-#endif /* __EEPROM_H__ */
+#endif /* _EEPROM_H_ */
 
 /******************* (C) COPYRIGHT 2011 STMicroelectronics *****END OF FILE****/

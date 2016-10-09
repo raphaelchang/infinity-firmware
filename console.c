@@ -54,9 +54,18 @@ void console_process_command(char *command)
         } while (tp != NULL);
         console_printf("\r\n");
     }
+    else if (strcmp(argv[0], "uptime") == 0) {
+        console_printf("System uptime: %d seconds\n", ST2S(chVTGetSystemTime()));
+        console_printf("\r\n");
+    }
     else if (strcmp(argv[0], "voltage") == 0) {
         float vbus = controller_get_bus_voltage();
         console_printf("Bus voltage: %.2f volts\n", (double)vbus);
+        console_printf("\r\n");
+    }
+    else if (strcmp(argv[0], "temp") == 0) {
+        float temp = controller_get_temperature();
+        console_printf("Board temperature: %.2f degrees C\n", (double)temp);
         console_printf("\r\n");
     }
     else if (strcmp(argv[0], "usb_override_set") == 0) {
@@ -87,6 +96,27 @@ void console_process_command(char *command)
         else
         {
             console_printf("Usage: current_set [current]\n");
+        }
+        console_printf("\r\n");
+    }
+    else if (strcmp(argv[0], "speed_set") == 0) {
+        if (argc == 2)
+        {
+            if (comm_get_usb_override())
+            {
+                float rpm = 0.0;
+                sscanf(argv[1], "%f", &rpm);
+                console_printf("Setting speed to %.2f RPM\n", (double)rpm);
+                controller_set_speed(rpm);
+            }
+            else
+            {
+                console_printf("USB control not enabled\n");
+            }
+        }
+        else
+        {
+            console_printf("Usage: speed_set [speed]\n");
         }
         console_printf("\r\n");
     }

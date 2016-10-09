@@ -12,6 +12,7 @@
 
 static uint16_t packet_index;
 static uint8_t packet_buffer[2048];
+static uint8_t packet_send_buffer[1024];
 static bool in_packet = false;
 static bool connect_event = false;
 
@@ -20,6 +21,11 @@ static int16_t parse_int16(const uint8_t *buffer, int32_t index);
 static uint16_t parse_uint16(const uint8_t *buffer, int32_t index);
 static int32_t parse_int32(const uint8_t *buffer, int32_t index);
 static uint32_t parse_uint32(const uint8_t *buffer, int32_t index);
+static void append_int16(uint8_t* buffer, int16_t number, uint32_t *index);
+static void append_uint16(uint8_t* buffer, uint16_t number, uint32_t *index);
+static void append_int32(uint8_t* buffer, int32_t number, uint32_t *index);
+static void append_uint32(uint8_t* buffer, uint32_t number, uint32_t *index);
+static void append_float32(uint8_t *buffer, float value, uint32_t *index);
 
 void packet_process_byte(uint8_t byte)
 {
@@ -48,6 +54,7 @@ static void process_packet(unsigned char *data, unsigned int len)
     uint8_t id = data[0];
     data++;
     len--;
+    uint32_t inx = 0;
     switch(id)
     {
         case PACKET_CONNECT:
@@ -75,6 +82,18 @@ static void process_packet(unsigned char *data, unsigned int len)
                 controller_set_current(parse_int16(data, 0) / 1000.0);
             }
             break;
+        case PACKET_GET_DATA:
+            packet_send_buffer[inx++] = PACKET_GET_DATA;
+            append_float32(packet_send_buffer, controller_get_bus_voltage(), &inx);
+            append_float32(packet_send_buffer, controller_get_temperature(), &inx);
+            append_float32(packet_send_buffer, controller_get_current_q(), &inx);
+            append_float32(packet_send_buffer, controller_get_current_d(), &inx);
+            append_float32(packet_send_buffer, controller_get_erpm(), &inx);
+            append_float32(packet_send_buffer, controller_get_command_current(), &inx);
+            append_uint16(packet_send_buffer, controller_get_state(), &inx);
+            append_uint16(packet_send_buffer, controller_get_fault(), &inx);
+            packet_send_buffer[inx++] = '\n';
+            packet_send_packet((unsigned char*)packet_send_buffer, inx);
         default:
             break;
     }
@@ -130,4 +149,36 @@ static uint32_t parse_uint32(const uint8_t *buffer, int32_t index) {
         ((uint32_t) buffer[index + 3]);
     index += 4;
     return res;
+}
+
+static void append_int16(uint8_t* buffer, int16_t number, uint32_t *index) {
+    buffer[(*index)++] = number >> 8;
+    buffer[(*index)++] = number;
+}
+
+static void append_uint16(uint8_t* buffer, uint16_t number, uint32_t *index) {
+    buffer[(*index)++] = number >> 8;
+    buffer[(*index)++] = number;
+}
+
+static void append_int32(uint8_t* buffer, int32_t number, uint32_t *index) {
+    buffer[(*index)++] = number >> 24;
+    buffer[(*index)++] = number >> 16;
+    buffer[(*index)++] = number >> 8;
+    buffer[(*index)++] = number;
+}
+
+static void append_uint32(uint8_t* buffer, uint32_t number, uint32_t *index) {
+    buffer[(*index)++] = number >> 24;
+    buffer[(*index)++] = number >> 16;
+    buffer[(*index)++] = number >> 8;
+    buffer[(*index)++] = number;
+}
+
+static void append_float32(uint8_t *buffer, float value, uint32_t *index) {
+    char *bytes = (char*) &value;
+    buffer[(*index)++] = bytes[0];
+    buffer[(*index)++] = bytes[1];
+    buffer[(*index)++] = bytes[2];
+    buffer[(*index)++] = bytes[3];
 }

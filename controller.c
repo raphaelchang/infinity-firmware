@@ -97,6 +97,7 @@ typedef struct {
 static volatile Config *config;
 static volatile ControllerState state = STOPPED;
 static volatile ControllerFault fault = NO_FAULT;
+static volatile ControllerMode mode = NONE;
 static volatile uint16_t ADC_Value[3];
 
 static volatile motor_state_t motor_state;
@@ -106,17 +107,24 @@ static volatile int adc3_1;
 static volatile int adc1_2;
 static volatile int adc2_2;
 static volatile int adc3_2;
-static volatile float temp;
+static volatile float temperature;
 static volatile int e = 0;
 static volatile float a, b, c;
 static volatile float commandDutyCycle = 0.0;
 static volatile float commandCurrentQ = 0.0;
 static volatile float commandCurrentD = 0.0;
+static volatile float commandSpeed = 0.0;
 static volatile bool overrideAngle = false;
 static volatile float angleToOverride;
 static volatile bool pwmEnabled = false;
+static volatile float pllAngle;
+static volatile float pllSpeed;
+static volatile float speedIntegral = 0.0;
+static volatile float speedPrevError = 0.0;
 
 static void apply_zsm(volatile float *a, volatile float *b, volatile float *c);
+static void pll_run(float angle, float dt, volatile float *pll_angle,
+	volatile float *pll_speed);
 static void disable_pwm(void);
 static void enable_pwm(void);
 static void play_startup_tone(void);
@@ -136,6 +144,8 @@ void controller_init(void)
     memset((void*)&motor_state, 0, sizeof(motor_state_t));
     overrideAngle = false;
     pwmEnabled = false;
+    pllAngle = 0.0;
+    pllSpeed = 0.0;
 
     utils_sys_lock_cnt();
     TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
@@ -298,6 +308,7 @@ void controller_init(void)
     palSetPad(EN_GATE_GPIO, EN_GATE_PIN);
 
     play_startup_tone();
+
 }
 
 /* Updates the controller state machine. Called as an interrupt handler on new ADC sample. */
@@ -312,8 +323,8 @@ void controller_update(void)
     adc3_2 = ADC_GetInjectedConversionValue(ADC3, ADC_InjectedChannel_2);
     int adc1_3 = ADC_GetInjectedConversionValue(ADC1, ADC_InjectedChannel_3);
     int adc2_3 = ADC_GetInjectedConversionValue(ADC2, ADC_InjectedChannel_3);
+    temperature = adc2_3;
     motor_state.v_bus = adc1_3 * (V_REG / 4095.0) * (VBUS_R1 + VBUS_R2) / VBUS_R2;
-    /*temp = (1.0 / ((logf(((4095.0 * 10000.0) / adc2_3 - 10000.0) / 10000.0) / 3434.0) + (1.0 / 298.15)) - 273.15);*/
     if (fault == OVERCURRENT || !(CHECK_CURRENT(adc1_1) && CHECK_CURRENT(adc2_1) && CHECK_CURRENT(adc3_1)))
     {
         disable_pwm();
@@ -345,6 +356,8 @@ void controller_update(void)
         motor_state.i_b = motor_state.i_b / 2.0 - (motor_state.i_a + motor_state.i_c) / 2.0;
         motor_state.i_c = motor_state.i_c / 2.0 - (motor_state.i_a + motor_state.i_b) / 2.0;
     }
+    transforms_clarke(motor_state.i_a, motor_state.i_b, motor_state.i_c, &motor_state.i_alpha, &motor_state.i_beta);
+    transforms_park(motor_state.i_alpha, motor_state.i_beta, motor_state.edeg, &motor_state.i_d, &motor_state.i_q);
     const float dt = 1.0 / config->pwmFrequency;
     switch(state)
     {
@@ -358,8 +371,59 @@ void controller_update(void)
             {
                 motor_state.edeg = angleToOverride;
             }
-            transforms_clarke(motor_state.i_a, motor_state.i_b, motor_state.i_c, &motor_state.i_alpha, &motor_state.i_beta);
-            transforms_park(motor_state.i_alpha, motor_state.i_beta, motor_state.edeg, &motor_state.i_d, &motor_state.i_q);
+            if (mode == SPEED)
+            {
+                float p_term;
+                float d_term;
+
+                // Too low RPM set. Reset state and return.
+                /*if (fabsf(m_speed_pid_set_rpm) < m_conf->s_pid_min_erpm) {*/
+                    /*i_term = 0.0;*/
+                    /*prev_error = 0;*/
+                    /*return;*/
+                /*}*/
+
+                // Compensation for supply voltage variations
+                float scale = 1.0 / motor_state.v_bus;
+
+                // Compute error
+                float error = commandSpeed - controller_get_erpm();
+
+                // Compute parameters
+                p_term = error * config->speedKp * scale;
+                speedIntegral += error * (config->speedKi * dt) * scale;
+                d_term = (error - speedPrevError) * (config->speedKd / dt) * scale;
+
+                // I-term wind-up protection
+                if (speedIntegral > 1.0)
+                {
+                    speedIntegral = 1.0;
+                }
+                else if (speedIntegral < -1.0)
+                {
+                    speedIntegral = -1.0;
+                }
+
+                speedPrevError = error;
+
+                // Calculate output
+                float output = p_term + speedIntegral + d_term;
+                if (output > 1.0)
+                {
+                    output = 1.0;
+                }
+                else if (output < -1.0)
+                {
+                    output = -1.0;
+                }
+
+                commandCurrentQ = output * config->maxCurrent;
+            }
+            else
+            {
+                speedIntegral = 0.0;
+                speedPrevError = 0.0;
+            }
             float i_d_set = commandCurrentD;
             float i_q_set = commandCurrentQ;
             float i_d_err = i_d_set - motor_state.i_d;
@@ -384,7 +448,7 @@ void controller_update(void)
             SET_DUTY(0.005, 0, 0);
             break;
     }
-
+    pll_run(motor_state.edeg, dt, &pllAngle, &pllSpeed);
 }
 
 void controller_set_duty(float duty)
@@ -399,6 +463,7 @@ void controller_set_duty(float duty)
     }
     commandDutyCycle = duty;
     state = RUNNING;
+    mode = DUTY_CYCLE;
     if (!pwmEnabled)
         enable_pwm();
 }
@@ -416,6 +481,16 @@ void controller_set_current(float current)
     commandCurrentQ = current;
     commandCurrentD = 0.0;
     state = RUNNING;
+    mode = CURRENT;
+    if (!pwmEnabled)
+        enable_pwm();
+}
+
+void controller_set_speed(float speed)
+{
+    commandSpeed = speed;
+    state = RUNNING;
+    mode = SPEED;
     if (!pwmEnabled)
         enable_pwm();
 }
@@ -423,8 +498,13 @@ void controller_set_current(float current)
 void controller_disable(void)
 {
     state = STOPPED;
+    mode = NONE;
     motor_state.integral_d = 0.0;
     motor_state.integral_q = 0.0;
+    commandCurrentQ = 0.0;
+    commandCurrentD = 0.0;
+    commandSpeed = 0.0;
+    commandDutyCycle = 0.0;
     if (pwmEnabled)
         disable_pwm();
 }
@@ -432,6 +512,11 @@ void controller_disable(void)
 float controller_get_bus_voltage(void)
 {
     return motor_state.v_bus;
+}
+
+float controller_get_temperature(void)
+{
+    return (1.0 / ((logf(((4095.0 * 10000.0) / temperature - 10000.0) / 10000.0) / 3434.0) + (1.0 / 298.15)) - 273.15);
 }
 
 bool controller_encoder_zero(float current, float *zero, bool *inverted)
@@ -519,9 +604,35 @@ float controller_measure_resistance(float current, uint16_t samples)
     return (voltage_avg / current_avg) * (2.0 / 3.0);
 }
 
+float controller_get_erpm(void)
+{
+    return pllSpeed / ((2.0 * M_PI) / 60.0);
+}
+
+float controller_get_current_q(void)
+{
+    return motor_state.i_q;
+}
+
+float controller_get_current_d(void)
+{
+    return motor_state.i_d;
+}
+
 void controller_print(void)
 {
-    USB_PRINT("%f, %f, %f, %f, %d, %d, %d, %f, %f, %f, %f, %f, %f, %f\n", motor_state.edeg, motor_state.v_a_norm, motor_state.v_b_norm, motor_state.v_c_norm, adc1_1, adc2_1, adc3_1, motor_state.i_a, motor_state.i_b, motor_state.i_c, motor_state.i_d, motor_state.i_q, motor_state.v_d, motor_state.v_q);
+    /*USB_PRINT("%f, %f, %f, %f, %d, %d, %d, %f, %f, %f, %f, %f, %f, %f\n", motor_state.edeg, motor_state.v_a_norm, motor_state.v_b_norm, motor_state.v_c_norm, adc1_1, adc2_1, adc3_1, motor_state.i_a, motor_state.i_b, motor_state.i_c, motor_state.i_d, motor_state.i_q, motor_state.v_d, motor_state.v_q);*/
+    USB_PRINT("%f, %f, %f, %d\n", controller_get_erpm(), commandCurrentQ, commandSpeed, mode);
+}
+
+static void pll_run(float angle, float dt, volatile float *pll_angle,
+	volatile float *pll_speed) {
+    angle *= M_PI / 180.0;
+    float delta_theta = angle - *pll_angle;
+    utils_norm_angle_rad(&delta_theta);
+    *pll_angle += (*pll_speed + config->pllKp * delta_theta) * dt;
+    utils_norm_angle_rad((float*)pll_angle);
+    *pll_speed += config->pllKi * delta_theta * dt;
 }
 
 static void apply_zsm(volatile float *a, volatile float *b, volatile float *c)

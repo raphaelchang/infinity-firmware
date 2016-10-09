@@ -103,6 +103,7 @@ void comm_nunchuk_update(void)
             if (btn_c)
             {
                 controller_set_current((((float)y - 128.0) / 128.0) * config->maxCurrent);
+                /*controller_set_speed((((float)y - 128.0) / 128.0) * 20000.0);*/
             }
             else
             {

@@ -43,11 +43,24 @@ void gpio_init(void)
     palSetPadMode(VBUS_GPIO, VBUS_PIN, PAL_MODE_INPUT_ANALOG);
     palSetPadMode(NTC_GPIO, NTC_PIN, PAL_MODE_INPUT_ANALOG);
 
+#if defined(INFINITY_V4_0) || defined(INFINITY_V3_0)
     // WS2812B
     palSetPadMode(WS2812B_GPIO, WS2812B_PIN,
             PAL_MODE_ALTERNATE(GPIO_AF_TIM3) |
             PAL_STM32_OTYPE_PUSHPULL |
             PAL_STM32_OSPEED_MID1);
+#else
+    // RGB LED
+    palSetPadMode(LED_R_GPIO, LED_R_PIN, PAL_MODE_ALTERNATE(GPIO_AF_TIM8) |
+            PAL_STM32_OTYPE_PUSHPULL |
+            PAL_STM32_OSPEED_MID1);
+    palSetPadMode(LED_G_GPIO, LED_G_PIN, PAL_MODE_ALTERNATE(GPIO_AF_TIM8) |
+            PAL_STM32_OTYPE_PUSHPULL |
+            PAL_STM32_OSPEED_MID1);
+    palSetPadMode(LED_B_GPIO, LED_B_PIN, PAL_MODE_ALTERNATE(GPIO_AF_TIM8) |
+            PAL_STM32_OTYPE_PUSHPULL |
+            PAL_STM32_OSPEED_MID1);
+#endif
 
     // USB
     palSetPadMode(GPIOA, 11, PAL_MODE_ALTERNATE(10));

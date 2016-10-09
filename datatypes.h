@@ -12,6 +12,14 @@ typedef enum
 
 typedef enum
 {
+    NONE,
+    CURRENT,
+    DUTY_CYCLE,
+    SPEED
+} ControllerMode;
+
+typedef enum
+{
     NO_FAULT,
     UNDERVOLTAGE,
     OVERVOLTAGE,
@@ -61,6 +69,11 @@ typedef struct
     volatile float currentKi;
     volatile float maxDuty;
     volatile float maxCurrent;
+    volatile float pllKp;
+    volatile float pllKi;
+    volatile float speedKp;
+    volatile float speedKi;
+    volatile float speedKd;
 } Config;
 
 typedef enum
@@ -70,7 +83,8 @@ typedef enum
     PACKET_USB_OVERRIDE_START = 0x02,
     PACKET_USB_OVERRIDE_END = 0x03,
     PACKET_SET_DUTY_CYCLE = 0x04,
-    PACKET_SET_CURRENT = 0x05
+    PACKET_SET_CURRENT = 0x05,
+    PACKET_GET_DATA = 0x06,
 } PacketID;
 
 #endif
