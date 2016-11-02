@@ -3,7 +3,6 @@
 #include "datatypes.h"
 #include "ch.h"
 #include "hal.h"
-#include "stm32f4xx_conf.h"
 #include "comm_usb.h"
 #include <string.h>
 #include <stdio.h>
@@ -163,6 +162,36 @@ void console_process_command(char *command)
 
         float res = controller_measure_resistance(i_last, 500);
         console_printf("Resistance at %.2f amps: %.4f ohms\n", i_last, res);
+        console_printf("\r\n");
+    }
+    else if (strcmp(argv[0], "ind") == 0) {
+	console_printf("Measuring winding inductance...\n");
+	float duty_last = 0.03;
+	/*for (float i = 0.02; i < 0.5; i *= 1.5) {*/
+	    /*float i_tmp;*/
+	    /*controller_measure_inductance(i, 20, &i_tmp);*/
+
+	    /*if (i_tmp >= i_last) {*/
+		/*duty_last = i;*/
+		/*break;*/
+	    /*}*/
+	/*}*/
+        float i_tmp = 0.0;
+	float ind = controller_measure_inductance(duty_last, 500, &i_tmp);
+	console_printf("Inductance with %.2f duty cycle at %.2f amps: %.4f microhenries\n", duty_last, i_tmp, ind);
+	console_printf("\r\n");
+    }
+    else if (strcmp(argv[0], "angles") == 0) {
+        console_printf("Actual angle: %.4f\n", controller_get_encoder_angle());
+        console_printf("Observer angle: %.4f\n", controller_get_observer_angle());
+        console_printf("\r\n");
+    }
+    else if (strcmp(argv[0], "faults") == 0) {
+        console_printf("Faults: %.2f\n", controller_get_fault_value());
+        console_printf("\r\n");
+    }
+    else if (strcmp(argv[0], "looptime") == 0) {
+        console_printf("Last loop time: %.1f microseconds\n", controller_get_looptime() * 1e6);
         console_printf("\r\n");
     }
     else if (strcmp(argv[0], "write") == 0) {

@@ -87,5 +87,6 @@
 #define CAN_RX_PIN 8
 #define CAN_TX_GPIO GPIOB
 #define CAN_TX_PIN 9
+#define CAN_DEV CAND1
 
 #endif /* _HW_CONF_V4_1_H_ */

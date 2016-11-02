@@ -7,7 +7,8 @@ typedef enum
 {
     STOPPED,
     RUNNING,
-    TONE
+    TONE,
+    INDUCTANCE_MEASURE
 } ControllerState;
 
 typedef enum
@@ -58,6 +59,7 @@ typedef enum
 
 typedef struct
 {
+    volatile uint8_t CANDeviceID;
     volatile EncoderType encoderType;
     volatile CommInterface commInterface;
     volatile ZSMMode zsmMode;
@@ -74,6 +76,13 @@ typedef struct
     volatile float speedKp;
     volatile float speedKi;
     volatile float speedKd;
+    volatile float motorResistance;
+    volatile float motorInductance;
+    volatile float motorFluxLinkage;
+    volatile float observerGain;
+    volatile bool forwardCAN;
+    volatile uint32_t CANStatusRate;
+    volatile bool sendStatusCAN;
 } Config;
 
 typedef enum

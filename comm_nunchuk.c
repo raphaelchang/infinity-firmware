@@ -163,4 +163,5 @@ void comm_nunchuk_update(void)
         i2cReleaseBus(&I2C_DEV);
         chThdSleepMilliseconds(100);
     }
+    chThdSleepMilliseconds(10);
 }

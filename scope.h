@@ -9,6 +9,8 @@
 void scope_init(void);
 /* Set the number of samples */
 void scope_set_window(uint16_t samples);
+/* Clear the scope */
+void scope_clear(uint8_t channel);
 /* Reset the scope after a trigger */
 void scope_arm(void);
 /* Stop logging data after the number of samples is reached */

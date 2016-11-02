@@ -18,9 +18,9 @@ static THD_FUNCTION(comm_update, arg) {
 
     chRegSetThreadName("Comm update");
 
+    comm_can_init();
     switch(config->commInterface) {
         case CAN:
-            comm_can_init();
             break;
         case I2C:
             comm_i2c_init();
@@ -66,14 +66,16 @@ static THD_FUNCTION(comm_update, arg) {
                     break;
             }
         }
+
         if (!comm_usb_serial_is_active())
         {
             usb_override = false;
         }
 
-        // Forward commands to CAN and USB
-        
-        chThdSleepMilliseconds(10);
+        if (config->forwardCAN && config->commInterface != CAN)
+        {
+            comm_can_forward_commands();
+        }
     }
 }
 

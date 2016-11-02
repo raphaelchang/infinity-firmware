@@ -90,7 +90,9 @@ bool scope_is_triggered(uint8_t channel)
 
 float scope_get_triggered_average(uint8_t channel)
 {
-    return avg_sum_triggered[channel] / samples_since_trigger[channel];
+    if (samples_since_trigger[channel] == 0)
+        return 0.0;
+    return avg_sum_triggered[channel] / (float)samples_since_trigger[channel];
 }
 
 float scope_get_average(uint8_t channel)
@@ -101,5 +103,5 @@ float scope_get_average(uint8_t channel)
     {
         sum += scope_data[channel][i];
     }
-    return sum / MAX_SAMPLES;
+    return sum / (float)MAX_SAMPLES;
 }

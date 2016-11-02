@@ -24,8 +24,22 @@
         TIM1->CCR1 = (int)(duty3 * TIM1->ARR); \
         TIM1->CCR2 = (int)(duty2 * TIM1->ARR); \
         TIM1->CCR3 = (int)(duty1 * TIM1->ARR); \
-        TIM1->CCR4 = TIM1->ARR - 2; \
         TIM1->CR1 &= ~TIM_CR1_UDIS;
+
+#define SET_DUTY_CURRENT_SAMPLE(duty1, duty2, duty3, current_sample) \
+        TIM1->CR1 |= TIM_CR1_UDIS; \
+        TIM1->CCR1 = (int)(duty3 * TIM1->ARR); \
+        TIM1->CCR2 = (int)(duty2 * TIM1->ARR); \
+        TIM1->CCR3 = (int)(duty1 * TIM1->ARR); \
+        TIM1->CCR4 = current_sample; \
+        TIM1->CR1 &= ~TIM_CR1_UDIS;
+
+#define DISABLE_PRELOAD_DUTY1()    TIM1->CCMR2 &= (uint16_t)(~TIM_CCMR2_OC3PE)
+#define DISABLE_PRELOAD_DUTY2()    TIM1->CCMR1 &= (uint16_t)(~TIM_CCMR1_OC2PE)
+#define DISABLE_PRELOAD_DUTY3()    TIM1->CCMR1 &= (uint16_t)(~TIM_CCMR1_OC1PE)
+#define ENABLE_PRELOAD_DUTY1()    TIM1->CCMR2 |= (uint16_t)(TIM_CCMR2_OC3PE)
+#define ENABLE_PRELOAD_DUTY2()    TIM1->CCMR1 |= (uint16_t)(TIM_CCMR1_OC2PE)
+#define ENABLE_PRELOAD_DUTY3()    TIM1->CCMR1 |= (uint16_t)(TIM_CCMR1_OC1PE)
 
 #define SET_PWM_FREQ(freq) \
         TIM1->CR1 |= TIM_CR1_UDIS; \
@@ -62,10 +76,11 @@
         TIM1->CCR4 = TIM1->ARR - 2; \
         TIM1->CR1 &= ~TIM_CR1_UDIS;
 
-#define CHECK_CURRENT(adc) (adc > 500 && adc < 4096 - 500)
+#define CHECK_CURRENT(adc) (adc > 100 && adc < 4096 - 100)
 
 typedef struct {
     float edeg;
+    float edeg_obs;
     float i_a;
     float i_b;
     float i_c;
@@ -121,10 +136,20 @@ static volatile float pllAngle;
 static volatile float pllSpeed;
 static volatile float speedIntegral = 0.0;
 static volatile float speedPrevError = 0.0;
+static volatile float inductance_measure_duty = 0.0;
+static volatile float faultValue = 0.0;
+
+static volatile float observer_x1 = 0.0;
+static volatile float observer_x2 = 0.0;
+static volatile float observer_angle = 0.0;
+
+static volatile float looptime = 0.0;
 
 static void apply_zsm(volatile float *a, volatile float *b, volatile float *c);
 static void pll_run(float angle, float dt, volatile float *pll_angle,
 	volatile float *pll_speed);
+static void observer_update(float v_alpha, float v_beta, float i_alpha, float i_beta,
+        float dt, volatile float *x1, volatile float *x2, volatile float *angle_obs);
 static void disable_pwm(void);
 static void enable_pwm(void);
 static void play_startup_tone(void);
@@ -296,10 +321,19 @@ void controller_init(void)
     TIM_Cmd(TIM1, ENABLE);
     TIM_CtrlPWMOutputs(TIM1, ENABLE);
 
+    SET_DUTY_CURRENT_SAMPLE(0, 0, 0, TIM1->ARR - 2);
     disable_pwm();
 
     utils_sys_unlock_cnt();
 
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM12, ENABLE);
+    TIM_TimeBaseStructure.TIM_Period = 0xFFFFFFFF;
+    TIM_TimeBaseStructure.TIM_Prescaler = (uint16_t)(((SYSTEM_CORE_CLOCK / 2) / 10000000) - 1);
+    TIM_TimeBaseStructure.TIM_ClockDivision = 0;
+    TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+    TIM_TimeBaseInit(TIM12, &TIM_TimeBaseStructure);
+
+    TIM_Cmd(TIM12, ENABLE);
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_WWDG, ENABLE);
     WWDG_SetPrescaler(WWDG_Prescaler_1);
     WWDG_SetWindowValue(255);
@@ -314,6 +348,7 @@ void controller_init(void)
 /* Updates the controller state machine. Called as an interrupt handler on new ADC sample. */
 void controller_update(void)
 {
+    TIM12->CNT = 0;
     WWDG_SetCounter(100);
     adc1_1 = ADC_GetInjectedConversionValue(ADC1, ADC_InjectedChannel_1);
     adc2_1 = ADC_GetInjectedConversionValue(ADC2, ADC_InjectedChannel_1);
@@ -325,17 +360,24 @@ void controller_update(void)
     int adc2_3 = ADC_GetInjectedConversionValue(ADC2, ADC_InjectedChannel_3);
     temperature = adc2_3;
     motor_state.v_bus = adc1_3 * (V_REG / 4095.0) * (VBUS_R1 + VBUS_R2) / VBUS_R2;
+    motor_state.i_a = ((int16_t)adc1_1 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
+    motor_state.i_b = ((int16_t)adc2_1 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
+    motor_state.i_c = ((int16_t)adc3_1 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
     if (fault == OVERCURRENT || !(CHECK_CURRENT(adc1_1) && CHECK_CURRENT(adc2_1) && CHECK_CURRENT(adc3_1)))
     {
         disable_pwm();
         SET_DUTY(0, 0, 0);
         palClearPad(EN_GATE_GPIO, EN_GATE_PIN);
         fault = OVERCURRENT;
+        state = STOPPED;
+        if (!CHECK_CURRENT(adc1_1))
+            faultValue = motor_state.i_a;
+        if (!CHECK_CURRENT(adc2_1))
+            faultValue = motor_state.i_b;
+        if (!CHECK_CURRENT(adc3_1))
+            faultValue = motor_state.i_c;
         return;
     }
-    motor_state.i_a = ((int16_t)adc1_1 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
-    motor_state.i_b = ((int16_t)adc2_1 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
-    motor_state.i_c = ((int16_t)adc3_1 - 2048) * (V_REG / 4095.0) / (CURRENT_SENSE_RES * CURRENT_AMP_GAIN);
     // Check for ADC measurements that happened when the low side PWM was too short
     if (motor_state.v_a_norm > 0.95)
     {
@@ -356,9 +398,14 @@ void controller_update(void)
         motor_state.i_b = motor_state.i_b / 2.0 - (motor_state.i_a + motor_state.i_c) / 2.0;
         motor_state.i_c = motor_state.i_c / 2.0 - (motor_state.i_a + motor_state.i_b) / 2.0;
     }
+    const float dt = 1.0 / config->pwmFrequency;
     transforms_clarke(motor_state.i_a, motor_state.i_b, motor_state.i_c, &motor_state.i_alpha, &motor_state.i_beta);
     transforms_park(motor_state.i_alpha, motor_state.i_beta, motor_state.edeg, &motor_state.i_d, &motor_state.i_q);
-    const float dt = 1.0 / config->pwmFrequency;
+    observer_update(motor_state.v_alpha, motor_state.v_beta,
+            motor_state.i_alpha, motor_state.i_beta, dt,
+            &observer_x1, &observer_x2, &observer_angle);
+    uint32_t inductance_duty = (uint32_t)((float)TIM1->ARR * inductance_measure_duty);
+    static uint8_t inductance_cnt = 0;
     switch(state)
     {
         case STOPPED:
@@ -383,18 +430,13 @@ void controller_update(void)
                     /*return;*/
                 /*}*/
 
-                // Compensation for supply voltage variations
                 float scale = 1.0 / motor_state.v_bus;
 
-                // Compute error
                 float error = commandSpeed - controller_get_erpm();
-
-                // Compute parameters
                 p_term = error * config->speedKp * scale;
                 speedIntegral += error * (config->speedKi * dt) * scale;
                 d_term = (error - speedPrevError) * (config->speedKd / dt) * scale;
 
-                // I-term wind-up protection
                 if (speedIntegral > 1.0)
                 {
                     speedIntegral = 1.0;
@@ -406,7 +448,6 @@ void controller_update(void)
 
                 speedPrevError = error;
 
-                // Calculate output
                 float output = p_term + speedIntegral + d_term;
                 if (output > 1.0)
                 {
@@ -447,15 +488,92 @@ void controller_update(void)
         case TONE:
             SET_DUTY(0.005, 0, 0);
             break;
+        case INDUCTANCE_MEASURE:
+            if (inductance_cnt == 0)
+            {
+                SET_DUTY_CURRENT_SAMPLE(0, 0, 0, inductance_duty - 10);
+                enable_pwm();
+            }
+            else if (inductance_cnt == 2)
+            {
+                SET_DUTY(0, inductance_measure_duty, inductance_measure_duty); // Current flows from B and C into A
+            }
+            else if (inductance_cnt == 3)
+            {
+                scope_log(0, -motor_state.i_a);
+                scope_log(1, motor_state.v_bus);
+                DISABLE_PRELOAD_DUTY2();
+                SET_DUTY(0, 0, 0);
+                ENABLE_PRELOAD_DUTY2();
+            }
+            else if (inductance_cnt == 5)
+            {
+                SET_DUTY(inductance_measure_duty, 0, inductance_measure_duty);
+            }
+            else if (inductance_cnt == 6)
+            {
+                scope_log(0, -motor_state.i_b);
+                scope_log(1, motor_state.v_bus);
+                DISABLE_PRELOAD_DUTY3();
+                SET_DUTY(0, 0, 0);
+                ENABLE_PRELOAD_DUTY3();
+            }
+            else if (inductance_cnt == 8)
+            {
+                SET_DUTY(inductance_measure_duty, inductance_measure_duty, 0);
+            }
+            else if (inductance_cnt == 9)
+            {
+                scope_log(0, -motor_state.i_c);
+                scope_log(1, motor_state.v_bus);
+                inductance_cnt = 0;
+                disable_pwm();
+                state = STOPPED;
+                SET_DUTY_CURRENT_SAMPLE(0, 0, 0, TIM1->ARR - 2);
+                break;
+            }
+            inductance_cnt++;
+            break;
     }
     pll_run(motor_state.edeg, dt, &pllAngle, &pllSpeed);
+    looptime = (float) TIM12->CNT / 10000000.0;
+}
+
+static void observer_update(float v_alpha, float v_beta, float i_alpha, float i_beta, float dt, volatile float *x1, volatile float *x2, volatile float *angle_obs)
+{
+    const float L = (3.0 / 2.0) * config->motorInductance;
+    const float R = (3.0 / 2.0) * config->motorResistance;
+    const float gamma = config->observerGain;
+    const float linkage = config->motorFluxLinkage;
+
+    const float Lia = L * i_alpha;
+    const float Lib = L * i_beta;
+
+    float k1 = (linkage * linkage) - ((*x1 - Lia) * (*x1 - Lia) + (*x2 - Lib) * (*x2 - Lib));
+    float x1_dot = 0.0;
+    float x2_dot = 0.0;
+
+    x1_dot = -R * i_alpha + v_alpha + ((gamma / 2.0) * (*x1 - Lia)) * k1;
+    x2_dot = -R * i_beta + v_beta + ((gamma / 2.0) * (*x2 - Lib)) * k1;
+    *x1 += x1_dot * dt;
+    *x2 += x2_dot * dt;
+
+    if (fabsf(*x1) > 1e20 || (*x1 != *x1)) {
+	*x1 = 0.0;
+    }
+
+    if (fabsf(*x2) > 1e20 || (*x2 != *x2)) {
+	*x2 = 0.0;
+    }
+
+    *angle_obs = utils_atan2(*x2 - L * i_beta, *x1 - L * i_alpha) * 180.0 / M_PI;
 }
 
 void controller_set_duty(float duty)
 {
     if (duty > 1.0)
     {
-        duty = 1.0;
+	duty = 1.0;
     }
     else if (duty < -1.0)
     {
@@ -604,6 +722,47 @@ float controller_measure_resistance(float current, uint16_t samples)
     return (voltage_avg / current_avg) * (2.0 / 3.0);
 }
 
+float controller_measure_inductance(float duty, uint16_t samples, float *curr)
+{
+    const float pwmFreqOld = config->pwmFrequency;
+    config->pwmFrequency = 1500.0;
+    SET_PWM_FREQ(config->pwmFrequency);
+    scope_clear(0);
+    scope_clear(1);
+    scope_arm();
+    scope_trigger();
+    inductance_measure_duty = duty;
+    for (uint16_t i = 0; i < samples; i++)
+    {
+        state = INDUCTANCE_MEASURE;
+        while (state == INDUCTANCE_MEASURE)
+        {
+            chThdSleepMilliseconds(1);
+        }
+    }
+    float avg_current = scope_get_triggered_average(0);
+    float avg_voltage = scope_get_triggered_average(1);
+    float t = (float)TIM1->ARR * inductance_measure_duty / (float)SYSTEM_CORE_CLOCK -
+	(float)(10 + 50) / (float)SYSTEM_CORE_CLOCK;
+    if (curr != NULL)
+    {
+        *curr = avg_current;
+    }
+    config->pwmFrequency = pwmFreqOld;
+    SET_PWM_FREQ(config->pwmFrequency);
+    return ((avg_voltage * t) / avg_current) * 1e6 * (2.0 /  3.0);
+}
+
+float controller_get_observer_angle(void)
+{
+    return motor_state.edeg_obs;
+}
+
+float controller_get_encoder_angle(void)
+{
+    return motor_state.edeg;
+}
+
 float controller_get_erpm(void)
 {
     return pllSpeed / ((2.0 * M_PI) / 60.0);
@@ -617,6 +776,11 @@ float controller_get_current_q(void)
 float controller_get_current_d(void)
 {
     return motor_state.i_d;
+}
+
+float controller_get_looptime(void)
+{
+    return looptime;
 }
 
 void controller_print(void)
@@ -700,6 +864,11 @@ static void enable_pwm(void)
 ControllerFault controller_get_fault(void)
 {
     return fault;
+}
+
+float controller_get_fault_value(void)
+{
+    return faultValue;
 }
 
 ControllerState controller_get_state(void)

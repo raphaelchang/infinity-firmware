@@ -16,6 +16,7 @@ static volatile Config config;
 
 void config_init(void)
 {
+    config.CANDeviceID = 0x00;
     config.encoderType = AS5x47P;
     config.commInterface = NUNCHUK;
     config.zsmMode = BOTTOM_CLAMP;
@@ -32,6 +33,13 @@ void config_init(void)
     config.speedKp = 0.005;
     config.speedKi = 0.005;;
     config.speedKd = 0.001;
+    config.motorResistance = 0.88;
+    config.motorInductance = 0.000022;
+    config.motorFluxLinkage = 0.00342;
+    config.observerGain = 3e7;
+    config.forwardCAN = false;
+    config.CANStatusRate = 10;
+    config.sendStatusCAN = true;
 
     memset(VirtAddVarTab, 0, sizeof(VirtAddVarTab));
 
@@ -53,7 +61,7 @@ Config* config_get_configuration(void)
 
 bool config_write(void)
 {
-    controller_disable(); 
+    controller_disable();
     utils_sys_lock_cnt();
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_WWDG, DISABLE);
 
