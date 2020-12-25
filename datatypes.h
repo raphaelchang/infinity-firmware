@@ -16,7 +16,8 @@ typedef enum
     NONE,
     CURRENT,
     DUTY_CYCLE,
-    SPEED
+    SPEED,
+    POWER
 } ControllerMode;
 
 typedef enum
@@ -44,7 +45,8 @@ typedef enum
     UART,
     PPM,
     NUNCHUK,
-    NRF,
+    NRF24,
+    NRF8001,
     CUSTOM
 } CommInterface;
 

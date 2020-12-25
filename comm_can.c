@@ -86,6 +86,7 @@ static THD_FUNCTION(can_status_thread, arg) {
     chRegSetThreadName("CAN status");
 
     for(;;) {
+        systime_t time = chVTGetSystemTimeX();
 	if (config->sendStatusCAN) {
 	    uint32_t send_index = 0;
 	    uint8_t buffer[8];
@@ -99,7 +100,7 @@ static THD_FUNCTION(can_status_thread, arg) {
 	if (sleep_time == 0) {
 	    sleep_time = 1;
 	}
-        chThdSleep(sleep_time);
+        chThdSleepUntil(time + sleep_time);
     }
 }
 

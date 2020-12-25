@@ -23,5 +23,7 @@ bool scope_is_triggered(uint8_t channel);
 float scope_get_triggered_average(uint8_t channel);
 /* Return the average of all samples */
 float scope_get_average(uint8_t channel);
+/* Return a point to the data */
+uint32_t scope_get_data(uint8_t channel, uint16_t samples, float *buffer);
 
 #endif /* _SCOPE_H_ */

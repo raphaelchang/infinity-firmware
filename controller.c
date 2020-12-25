@@ -141,7 +141,6 @@ static volatile float faultValue = 0.0;
 
 static volatile float observer_x1 = 0.0;
 static volatile float observer_x2 = 0.0;
-static volatile float observer_angle = 0.0;
 
 static volatile float looptime = 0.0;
 
@@ -342,7 +341,7 @@ void controller_init(void)
     palSetPad(EN_GATE_GPIO, EN_GATE_PIN);
 
     play_startup_tone();
-
+    scope_arm();
 }
 
 /* Updates the controller state machine. Called as an interrupt handler on new ADC sample. */
@@ -401,9 +400,9 @@ void controller_update(void)
     const float dt = 1.0 / config->pwmFrequency;
     transforms_clarke(motor_state.i_a, motor_state.i_b, motor_state.i_c, &motor_state.i_alpha, &motor_state.i_beta);
     transforms_park(motor_state.i_alpha, motor_state.i_beta, motor_state.edeg, &motor_state.i_d, &motor_state.i_q);
-    observer_update(motor_state.v_alpha, motor_state.v_beta,
-            motor_state.i_alpha, motor_state.i_beta, dt,
-            &observer_x1, &observer_x2, &observer_angle);
+    /*observer_update(motor_state.v_alpha, motor_state.v_beta,*/
+            /*motor_state.i_alpha, motor_state.i_beta, dt,*/
+            /*&observer_x1, &observer_x2, &motor_state.edeg_obs);*/
     uint32_t inductance_duty = (uint32_t)((float)TIM1->ARR * inductance_measure_duty);
     static uint8_t inductance_cnt = 0;
     switch(state)
@@ -484,6 +483,12 @@ void controller_update(void)
             transforms_inverse_clarke(motor_state.v_alpha_norm, motor_state.v_beta_norm, &motor_state.v_a_norm, &motor_state.v_b_norm, &motor_state.v_c_norm);
             apply_zsm(&motor_state.v_a_norm, &motor_state.v_b_norm, &motor_state.v_c_norm);
             SET_DUTY(motor_state.v_a_norm, motor_state.v_b_norm, motor_state.v_c_norm);
+            /*scope_log(0, motor_state.edeg);*/
+            /*scope_log(1, motor_state.edeg_obs);*/
+            /*if (motor_state.i_q > 20.0 || motor_state.i_q < -20.0 || motor_state.i_d > 20.0 || motor_state.i_d < -20.0)*/
+            /*{*/
+                /*scope_trigger();*/
+            /*}*/
             break;
         case TONE:
             SET_DUTY(0.005, 0, 0);
@@ -567,6 +572,8 @@ static void observer_update(float v_alpha, float v_beta, float i_alpha, float i_
     }
 
     *angle_obs = utils_atan2(*x2 - L * i_beta, *x1 - L * i_alpha) * 180.0 / M_PI;
+    if (*angle_obs < 0)
+        *angle_obs += 360.0;
 }
 
 void controller_set_duty(float duty)

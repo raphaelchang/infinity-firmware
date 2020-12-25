@@ -21,7 +21,7 @@ void config_init(void)
     config.commInterface = NUNCHUK;
     config.zsmMode = BOTTOM_CLAMP;
     config.polePairs = 7;
-    config.encoderZero = 62.2f;
+    config.encoderZero = 173.7f;
     config.encoderInverted = true;
     config.pwmFrequency = 20000.0;
     config.currentKp = 0.1;
@@ -39,7 +39,7 @@ void config_init(void)
     config.observerGain = 3e7;
     config.forwardCAN = false;
     config.CANStatusRate = 10;
-    config.sendStatusCAN = true;
+    config.sendStatusCAN = false;
 
     memset(VirtAddVarTab, 0, sizeof(VirtAddVarTab));
 

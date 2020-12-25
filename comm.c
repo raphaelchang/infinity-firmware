@@ -18,7 +18,7 @@ static THD_FUNCTION(comm_update, arg) {
 
     chRegSetThreadName("Comm update");
 
-    comm_can_init();
+    /*comm_can_init();*/
     switch(config->commInterface) {
         case CAN:
             break;
@@ -33,7 +33,7 @@ static THD_FUNCTION(comm_update, arg) {
         case NUNCHUK:
             comm_nunchuk_init();
             break;
-        case NRF:
+        case NRF24:
             break;
         case CUSTOM:
             break;
@@ -58,7 +58,7 @@ static THD_FUNCTION(comm_update, arg) {
                 case NUNCHUK:
                     comm_nunchuk_update();
                     break;
-                case NRF:
+                case NRF24:
                     break;
                 case CUSTOM:
                     break;
@@ -75,6 +75,10 @@ static THD_FUNCTION(comm_update, arg) {
         if (config->forwardCAN && config->commInterface != CAN)
         {
             comm_can_forward_commands();
+        }
+        if (usb_override)
+        {
+            chThdSleepMilliseconds(10);
         }
     }
 }

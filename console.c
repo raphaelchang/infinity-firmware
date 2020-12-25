@@ -9,6 +9,7 @@
 #include "comm.h"
 #include "controller.h"
 #include "config.h"
+#include "scope.h"
 
 void console_process_command(char *command)
 {
@@ -206,6 +207,24 @@ void console_process_command(char *command)
     else if (strcmp(argv[0], "read") == 0) {
         Config temp;
         config_read(&temp);
+        console_printf("\r\n");
+    }
+    else if (strcmp(argv[0], "scope_dump") == 0) {
+        if (argc == 2)
+        {
+            int channel;
+            sscanf(argv[1], "%d", &channel);
+            float buffer[256];
+            uint16_t size = scope_get_data(channel, 256, buffer);
+            for (uint16_t i = 0; i < size; i++)
+            {
+                console_printf("%f\n", buffer[i]);
+            }
+        }
+        else
+        {
+            console_printf("Usage: scope_dump [channel]\n");
+        }
         console_printf("\r\n");
     }
     else

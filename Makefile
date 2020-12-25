@@ -108,7 +108,7 @@ include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_v7m.mk
 # Other files (optional).
 
 # Define linker script file here
-LDSCRIPT= STM32F405xG.ld
+LDSCRIPT = STM32F405xG.ld
 
 # C sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.

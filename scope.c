@@ -71,7 +71,7 @@ void scope_log(uint8_t channel, float data)
         return;
     }
     scope_data[channel][curr_index[channel]] = data;
-    curr_index[channel] = (curr_index[channel] + 1) % MAX_SAMPLES;
+    curr_index[channel] = (curr_index[channel] + 1) % num_samples;
     if (triggered)
     {
         samples_since_trigger[channel]++;
@@ -85,7 +85,7 @@ void scope_log(uint8_t channel, float data)
 
 bool scope_is_triggered(uint8_t channel)
 {
-    return triggered && samples_since_trigger[channel] >= num_samples;
+    return triggered && samples_since_trigger[channel] >= 64;
 }
 
 float scope_get_triggered_average(uint8_t channel)
@@ -99,9 +99,18 @@ float scope_get_average(uint8_t channel)
 {
     uint16_t i = 0;
     float sum = 0;
-    for (i = 0; i < MAX_SAMPLES; i++)
+    for (i = 0; i < num_samples; i++)
     {
         sum += scope_data[channel][i];
     }
-    return sum / (float)MAX_SAMPLES;
+    return sum / (float)num_samples;
+}
+
+uint32_t scope_get_data(uint8_t channel, uint16_t samples, float *buffer)
+{
+    for (uint16_t i = 0; i < samples; i++)
+    {
+        buffer[i] = scope_data[channel][(curr_index[channel] + i + num_samples - samples) % num_samples];
+    }
+    return samples;
 }
